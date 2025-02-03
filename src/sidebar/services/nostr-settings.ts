@@ -19,7 +19,7 @@ type NostrSettingsLocalStorage = Omit<NostrSettingsState, 'privateKey'> & {
 export class NostrSettingsService {
   private _storage: LocalStorageService;
   private _store: SidebarStore;
-  private _nostrProfile: NostrProfileService;
+  private _nostrProfileService: NostrProfileService;
 
   /**
    * @param localStorage - Storage used to persist the settings
@@ -27,11 +27,11 @@ export class NostrSettingsService {
   constructor(
     localStorage: LocalStorageService,
     store: SidebarStore,
-    nostrProfile: NostrProfileService,
+    nostrProfileService: NostrProfileService,
   ) {
     this._storage = localStorage;
     this._store = store;
-    this._nostrProfile = nostrProfile;
+    this._nostrProfileService = nostrProfileService;
 
     // Load initial settings from localStorage
     const privateKeyHex = this.getPrivateKeyHex();
@@ -44,7 +44,7 @@ export class NostrSettingsService {
       this._store.setPublicKeyHex(publicKeyHex);
       this._store.setConnectMode('nsec');
       // Initialize profile loading
-      this._nostrProfile.loadProfile(publicKeyHex);
+      this._nostrProfileService.loadProfile(publicKeyHex);
     }
   }
 
@@ -79,6 +79,9 @@ export class NostrSettingsService {
       publicKeyHex,
       connectMode: 'nsec',
       profile: null,
+      nostrProfileUrl: this._store.getNostrProfileUrl(),
+      nostrSearchUrl: this._store.getNostrSearchUrl(),
+      nostrEventUrl: this._store.getNostrEventUrl(),
     };
 
     try {
@@ -90,9 +93,9 @@ export class NostrSettingsService {
       
       // Trigger profile loading when private key is set
       if (publicKeyHex) {
-        this._nostrProfile.loadProfile(publicKeyHex);
+        this._nostrProfileService.loadProfile(publicKeyHex);
       } else {
-        this._nostrProfile.clearProfile();
+        this._nostrProfileService.clearProfile();
       }
     } catch (e) {
       console.error('Failed to save nostr settings to localStorage:', e);

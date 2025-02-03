@@ -9,7 +9,7 @@ import {
   isSaved,
   quote,
 } from '../../helpers/annotation-metadata';
-import { annotationDisplayName } from '../../helpers/annotation-user';
+import { annotationNostrDisplayName } from '../../helpers/annotation-user';
 import { withServices } from '../../service-context';
 import type { AnnotationsService } from '../../services/annotations';
 import { useSidebarStore } from '../../store';
@@ -87,19 +87,17 @@ function Annotation({
 
   const showActions = !isSaving && !isEditing && isSaved(annotation);
 
-  const defaultAuthority = store.defaultAuthority();
-  const displayNamesEnabled = store.isFeatureEnabled('client_display_names');
-
   const onReply = () => {
     if (isSaved(annotation) && userid) {
+      // TODO: nostrize
       annotationsService.reply(annotation, userid);
     }
   };
 
   const authorName = useMemo(
     () =>
-      annotationDisplayName(annotation, defaultAuthority, displayNamesEnabled),
-    [annotation, defaultAuthority, displayNamesEnabled],
+      annotationNostrDisplayName(annotation),
+    [annotation],
   );
 
   const annotationDescription = isSaved(annotation)

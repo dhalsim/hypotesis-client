@@ -42,6 +42,9 @@ function configurationKeys(context: Context): string[] {
       'contentReady',
       'subFrameIdentifier',
       'sideBySide',
+      'nostrProfileUrl',
+      'nostrSearchUrl',
+      'nostrEventUrl',
     ],
     sidebar: [
       'appType',
@@ -212,6 +215,21 @@ const configDefinitions: ConfigDefinitionMap = {
   sideBySide: {
     allowInBrowserExt: true,
     getValue: settings => settings.sideBySide,
+  },
+  nostrProfileUrl: {
+    allowInBrowserExt: true,
+    defaultValue: null,
+    getValue: settings => settings.nostrProfileUrl,
+  },
+  nostrSearchUrl: {
+    allowInBrowserExt: true,
+    defaultValue: null,
+    getValue: settings => settings.nostrSearchUrl,
+  },
+  nostrEventUrl: {
+    allowInBrowserExt: true,
+    defaultValue: null,
+    getValue: settings => settings.nostrEventUrl,
   },
 };
 

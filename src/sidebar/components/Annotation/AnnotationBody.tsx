@@ -1,14 +1,15 @@
 import { Button, CollapseIcon, ExpandIcon } from '@hypothesis/frontend-shared';
 import classnames from 'classnames';
-import { useMemo, useState } from 'preact/hooks';
+import { useState } from 'preact/hooks';
 
 import type { Annotation } from '../../../types/api';
 import type { SidebarSettings } from '../../../types/config';
-import { isThirdPartyUser } from '../../helpers/account-id';
 import { isHidden } from '../../helpers/annotation-metadata';
 import { applyTheme } from '../../helpers/theme';
 import { withServices } from '../../service-context';
 import { useSidebarStore } from '../../store';
+import { nostrSearchUrl } from '../../helpers/nostr';
+
 import Excerpt from '../Excerpt';
 import MarkdownView from '../MarkdownView';
 import TagList from '../TagList';
@@ -68,7 +69,6 @@ function AnnotationBody({ annotation, settings }: AnnotationBodyProps) {
   const [collapsible, setCollapsible] = useState(false);
 
   const store = useSidebarStore();
-  const defaultAuthority = store.defaultAuthority();
   const draft = store.getDraft(annotation);
 
   // If there is a draft use the tag and text from it.
@@ -79,13 +79,8 @@ function AnnotationBody({ annotation, settings }: AnnotationBodyProps) {
 
   const textStyle = applyTheme(['annotationFontFamily'], settings);
 
-  const shouldLinkTags = useMemo(
-    () => annotation && !isThirdPartyUser(annotation?.user, defaultAuthority),
-    [annotation, defaultAuthority],
-  );
-
   const createTagSearchURL = (tag: string) => {
-    return store.getLink('search.tag', { tag });
+    return nostrSearchUrl({ settings, store, tag });
   };
 
   return (
@@ -118,9 +113,7 @@ function AnnotationBody({ annotation, settings }: AnnotationBodyProps) {
                     <TagListItem
                       key={tag}
                       tag={tag}
-                      href={
-                        shouldLinkTags ? createTagSearchURL(tag) : undefined
-                      }
+                      href={createTagSearchURL(tag)}
                     />
                   );
                 })}

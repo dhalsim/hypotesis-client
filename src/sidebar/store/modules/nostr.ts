@@ -15,6 +15,9 @@ export type State = {
   publicKeyHex: string | null;
   connectMode: 'nsec' | 'bunker' | 'nostr-connect';
   profile: NostrProfile | null;
+  nostrProfileUrl: string;
+  nostrSearchUrl: string;
+  nostrEventUrl: string;
 };
 
 const initialState: State = {
@@ -22,6 +25,9 @@ const initialState: State = {
   publicKeyHex: null,
   connectMode: 'nsec',
   profile: null,
+  nostrProfileUrl: 'https://njump.me',
+  nostrSearchUrl: 'https://nostr.band/?q=',
+  nostrEventUrl: 'https://njump.me',
 };
 
 const reducers = {
@@ -60,6 +66,9 @@ const reducers = {
       ...state,
       profile: { ...state.profile, loading: action.loading },
     };
+  },
+  SET_NOSTR_PROFILE_URL(state: State, action: { nostrProfileUrl: string }) {
+    return { ...state, nostrProfileUrl: action.nostrProfileUrl };
   },
 };
 
@@ -103,6 +112,18 @@ function isProfileLoading(state: State) {
   return state.profile?.loading ?? false;
 }
 
+function getNostrProfileUrl(state: State) {
+  return state.nostrProfileUrl;
+}
+
+function getNostrSearchUrl(state: State) {
+  return state.nostrSearchUrl;
+}
+
+function getNostrEventUrl(state: State) {
+  return state.nostrEventUrl;
+}
+
 export const nostrModule = createStoreModule(initialState, {
   namespace: 'nostr',
   reducers,
@@ -119,5 +140,8 @@ export const nostrModule = createStoreModule(initialState, {
     getConnectMode,
     getProfile,
     isProfileLoading,
+    getNostrProfileUrl,
+    getNostrEventUrl,
+    getNostrSearchUrl,
   },
 });

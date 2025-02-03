@@ -4,8 +4,9 @@ import { useEffect, useRef } from 'preact/hooks';
 import { tabForAnnotation } from '../helpers/tabs';
 import { withServices } from '../service-context';
 import type { FrameSyncService } from '../services/frame-sync';
-import type { LoadAnnotationsService } from '../services/load-annotations';
 import type { StreamerService } from '../services/streamer';
+import type { NostrFetchHighlightsService } from '../services/nostr-fetch-highlights';
+
 import { useSidebarStore } from '../store';
 import LoggedOutMessage from './LoggedOutMessage';
 import LoginPromptPanel from './LoginPromptPanel';
@@ -20,8 +21,8 @@ export type SidebarViewProps = {
 
   // injected
   frameSync: FrameSyncService;
-  loadAnnotationsService: LoadAnnotationsService;
   streamer: StreamerService;
+  nostrFetchHighlightsService: NostrFetchHighlightsService;
 };
 
 /**
@@ -31,8 +32,8 @@ function SidebarView({
   frameSync,
   onLogin,
   onSignUp,
-  loadAnnotationsService,
   streamer,
+  nostrFetchHighlightsService
 }: SidebarViewProps) {
   // Store state values
   const store = useSidebarStore();
@@ -99,12 +100,15 @@ function SidebarView({
       prevGroupId.current = focusedGroupId;
     }
     if (focusedGroupId && searchUris.length) {
-      loadAnnotationsService.load({
-        groupId: focusedGroupId,
-        uris: searchUris,
+      nostrFetchHighlightsService.loadByUri({
+        uri: searchUris[0],
+        onError: (error) => { 
+          // eslint-disable-next-line no-console
+          console.log(error); 
+        }
       });
     }
-  }, [store, loadAnnotationsService, focusedGroupId, userId, searchUris]);
+  }, [store, nostrFetchHighlightsService, focusedGroupId, userId, searchUris]);
 
   // When a `linkedAnnotationAnchorTag` becomes available, scroll to it
   // and focus it
@@ -163,6 +167,6 @@ function SidebarView({
 
 export default withServices(SidebarView, [
   'frameSync',
-  'loadAnnotationsService',
+  'nostrFetchHighlightsService',
   'streamer',
 ]);

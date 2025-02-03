@@ -126,7 +126,7 @@ function TopBar({
               <Spinner />
             </div>
           ) : (
-            <NostrUserMenu onNostrLogout={onNostrLogout} />
+            <NostrUserMenu onNostrLogout={onNostrLogout} settings={settings} />
           )}
         </div>
       </div>

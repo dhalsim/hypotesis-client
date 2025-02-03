@@ -18,6 +18,9 @@ export type SettingsGetters = {
   profileAppUrl: string;
   hostPageSetting: (name: string) => unknown;
   sideBySide: SideBySideOptions;
+  nostrProfileUrl: string;
+  nostrSearchUrl: string;
+  nostrEventUrl: string;
 };
 
 /**
@@ -180,6 +183,18 @@ export function settingsFrom(window_: Window): SettingsGetters {
     return undefined;
   }
 
+  function nostrProfileUrl(): string {
+    return (hostPageSetting('nostrProfileUrl') as string) ?? 'https://njump.me';
+  }
+
+  function nostrSearchUrl(): string {
+    return (hostPageSetting('nostrSearchUrl') as string) ?? 'https://nostr.band/?q=';
+  }
+
+  function nostrEventUrl(): string {
+    return (hostPageSetting('nostrEventUrl') as string) ?? 'https://njump.me';
+  }
+
   return {
     get annotations() {
       return annotations();
@@ -207,6 +222,15 @@ export function settingsFrom(window_: Window): SettingsGetters {
     },
     get sideBySide() {
       return sideBySide();
+    },
+    get nostrProfileUrl() {
+      return nostrProfileUrl();
+    },
+    get nostrSearchUrl() {
+      return nostrSearchUrl();
+    },
+    get nostrEventUrl() {
+      return nostrEventUrl();
     },
     hostPageSetting,
   };

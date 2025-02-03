@@ -10,11 +10,11 @@ import type { NostrRelaysService } from './nostr-relays';
 // @inject
 export class NostrProfileService {
   private _store: SidebarStore;
-  private _nostrRelays: NostrRelaysService;
+  private _nostrRelaysService: NostrRelaysService;
 
-  constructor(store: SidebarStore, nostrRelays: NostrRelaysService) {
+  constructor(store: SidebarStore, nostrRelaysService: NostrRelaysService) {
     this._store = store;
-    this._nostrRelays = nostrRelays;
+    this._nostrRelaysService = nostrRelaysService;
   }
 
   /**
@@ -31,32 +31,7 @@ export class NostrProfileService {
 
       this._store.setProfile(initialProfile);
 
-      const pool = new SimplePool();
-      const relays = this._nostrRelays.getReadRelays().map(relay => relay.url);
-      
-      const filter = {
-        kinds: [0],
-        authors: [publicKeyHex],
-        limit: 1,
-      };
-
-      const metadataEvent = await pool.get(relays, filter);
-
-      if (!metadataEvent) {
-        console.error('metadata filter', filter);
-        console.error('metadata relays', relays);
-
-        throw new Error('No metadata event found');
-      }
-
-      const metadata = JSON.parse(metadataEvent.content);
-
-      const profile: NostrProfile = {
-        publicKeyHex,
-        displayName: metadata.display_name || metadata.name,
-        picture: metadata.picture,
-        loading: false,
-      };
+      const profile = await this.fetchProfile(publicKeyHex);
 
       this._store.setProfile(profile);
     } catch (err) {
@@ -64,6 +39,37 @@ export class NostrProfileService {
       // Clear any existing profile on error
       this._store.setProfile(null);
     }
+  }
+
+  async fetchProfile(publicKeyHex: string): Promise<NostrProfile> {
+    const pool = new SimplePool();
+    const relays = this._nostrRelaysService.getReadRelays().map(
+      relay => relay.url
+    );
+    
+    const filter = {
+      kinds: [0],
+      authors: [publicKeyHex],
+      limit: 1,
+    };
+
+    const metadataEvent = await pool.get(relays, filter);
+
+    if (!metadataEvent) {
+      console.error('metadata filter', filter);
+      console.error('metadata relays', relays);
+
+      throw new Error('No metadata event found');
+    }
+
+    const metadata = JSON.parse(metadataEvent.content);
+    
+    return {
+      publicKeyHex,
+      displayName: metadata.display_name || metadata.name,
+      picture: metadata.picture,
+      loading: false,
+    };
   }
 
   /**

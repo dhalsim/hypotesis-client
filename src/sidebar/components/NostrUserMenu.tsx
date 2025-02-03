@@ -1,13 +1,18 @@
 import { ProfileIcon, Spinner } from '@hypothesis/frontend-shared';
 import { useState } from 'preact/hooks';
 
-import { useSidebarStore } from '../store';
 import Menu from './Menu';
 import MenuItem from './MenuItem';
 import MenuSection from './MenuSection';
 
+import { useSidebarStore } from '../store';
+import { nostrProfileUrl } from '../helpers/nostr';
+import type { SidebarSettings } from '../../types/config';
+
 export type NostrUserMenuProps = {
   onNostrLogout: () => void;
+
+  settings: SidebarSettings;
 };
 
 /**
@@ -15,7 +20,7 @@ export type NostrUserMenuProps = {
  *
  * This menu will contain Nostr-specific items and functionality.
  */
-export default function NostrUserMenu({ onNostrLogout }: NostrUserMenuProps) {
+export default function NostrUserMenu({ onNostrLogout, settings }: NostrUserMenuProps) {
   const store = useSidebarStore();
   const profile = store.getProfile();
   const isLoading = store.isProfileLoading();
@@ -28,6 +33,14 @@ export default function NostrUserMenu({ onNostrLogout }: NostrUserMenuProps) {
   const openNostrConnectPanel = () => {
     store.toggleSidebarPanel('nostrConnectPanel');
     setOpen(false); // Close the menu after clicking
+  };
+
+  const openNostrProfile = () => {
+    if (profile?.publicKeyHex) {
+      const url = nostrProfileUrl({ settings, store, pubkey: profile.publicKeyHex });
+      
+      window.open(url, '_blank');
+    }
   };
 
   const menuLabel = (
@@ -52,7 +65,7 @@ export default function NostrUserMenu({ onNostrLogout }: NostrUserMenuProps) {
           onOpenChanged={setOpen}
         >
           <MenuSection>
-            <MenuItem label={displayName} isDisabled={false} />
+            <MenuItem label={displayName} isDisabled={false} onClick={openNostrProfile} />
             <MenuItem label="Nostr settings" onClick={openNostrConnectPanel} />
           </MenuSection>
           <MenuSection>

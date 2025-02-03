@@ -1,5 +1,7 @@
+import { nip19 } from 'nostr-tools';
 import type { Annotation } from '../../types/api';
 import type { SidebarSettings } from '../../types/config';
+
 import { isThirdPartyUser, username } from './account-id';
 
 /**
@@ -25,6 +27,14 @@ export function annotationDisplayName(
   return useDisplayName && annotation.user_info?.display_name
     ? annotation.user_info.display_name
     : username(annotation.user);
+}
+
+export function annotationNostrDisplayName(
+  annotation: Pick<Annotation, 'user' | 'user_info'>,
+): string {
+  const npub = nip19.npubEncode(annotation.user);
+
+  return annotation.user_info?.display_name || npub.slice(0, 5) + ':' + npub.slice(-5);
 }
 
 /**

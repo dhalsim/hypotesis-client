@@ -12,7 +12,9 @@ export class NostrRelaysService {
       new Relay('ws://localhost:10547'),
       new Relay('wss://purplepag.es/'),
       new Relay('wss://relay.nostr.band/all'),
-    ];
+    ].concat(process.env.NODE_ENV !== 'production' 
+      ? [new Relay('ws://localhost:10547')]
+      : []);
     
     this._writeRelays = process.env.NODE_ENV !== 'production' 
       ? [new Relay('ws://localhost:10547')]
