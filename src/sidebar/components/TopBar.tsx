@@ -55,9 +55,9 @@ function TopBar({
   );
 
   const toggleNostrConnectPanel = () => {
-    store.toggleSidebarPanel('nostrConnect');
+    store.toggleSidebarPanel('nostrConnectPanel');
   };
-  const isNostrConnectPanelOpen = store.isSidebarPanelOpen('nostrConnect');
+  const isNostrConnectPanelOpen = store.isSidebarPanelOpen('nostrConnectPanel');
 
   /**
    * Open the help panel, or, if a service callback is configured to handle

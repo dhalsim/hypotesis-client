@@ -31,10 +31,6 @@ import { GroupsService } from './services/groups';
 import { ImportAnnotationsService } from './services/import-annotations';
 import { LoadAnnotationsService } from './services/load-annotations';
 import { LocalStorageService } from './services/local-storage';
-import { NostrFetchHighlightsService } from './services/nostr-fetch-highlights';
-import { NostrProfileService } from './services/nostr-profile';
-import { NostrRelaysService } from './services/nostr-relays';
-import { NostrSettingsService } from './services/nostr-settings';
 import { PersistedDefaultsService } from './services/persisted-defaults';
 import { RouterService } from './services/router';
 import { ServiceURLService } from './services/service-url';
@@ -44,6 +40,11 @@ import { StreamerService } from './services/streamer';
 import { TagsService } from './services/tags';
 import { ThreadsService } from './services/threads';
 import { ToastMessengerService } from './services/toast-messenger';
+import { NostrHighlightAdapterService } from './services/nostr-highlight-adapter';
+import { NostrFetchHighlightsService } from './services/nostr-fetch-highlights';
+import { NostrProfileService } from './services/nostr-profile';
+import { NostrRelaysService } from './services/nostr-relays';
+import { NostrSettingsService } from './services/nostr-settings';
 import { createSidebarStore } from './store';
 import type { SidebarStore } from './store';
 import { disableOpenerForExternalLinks } from './util/disable-opener-for-external-links';
@@ -160,10 +161,11 @@ function startApp(settings: SidebarSettings, appEl: HTMLElement) {
     .register('loadAnnotationsService', LoadAnnotationsService)
     .register('localStorage', LocalStorageService)
     .register('persistedDefaults', PersistedDefaultsService)
-    .register('nostrRelays', NostrRelaysService)
-    .register('nostrProfile', NostrProfileService)
-    .register('nostrSettings', NostrSettingsService)
-    .register('nostrFetchHighlights', NostrFetchHighlightsService)
+    .register('nostrRelaysService', NostrRelaysService)
+    .register('nostrProfileService', NostrProfileService)
+    .register('nostrSettingsService', NostrSettingsService)
+    .register('nostrFetchHighlightsService', NostrFetchHighlightsService)
+    .register('nostrHighlightAdapterService', NostrHighlightAdapterService)
     .register('router', RouterService)
     .register('serviceURL', ServiceURLService)
     .register('session', SessionService)

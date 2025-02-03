@@ -32,7 +32,7 @@ export type HypothesisAppProps = {
   settings: SidebarSettings;
   session: SessionService;
   toastMessenger: ToastMessengerService;
-  nostrSettings: NostrSettingsService;
+  nostrSettingsService: NostrSettingsService;
 };
 
 /**
@@ -47,7 +47,7 @@ function HypothesisApp({
   settings,
   session,
   toastMessenger,
-  nostrSettings,
+  nostrSettingsService,
 }: HypothesisAppProps) {
   const store = useSidebarStore();
   const profile = store.profile();
@@ -132,7 +132,7 @@ function HypothesisApp({
 
     store.removeAnnotations(store.unsavedAnnotations());
     store.discardAllDrafts();
-    nostrSettings.setPrivateKey(null);
+    nostrSettingsService.setPrivateKey(null);
   };
 
   return (
@@ -166,9 +166,9 @@ function HypothesisApp({
         <SearchPanel />
         <ShareDialog shareTab={!isThirdParty} />
         <NostrConnectPanel
-          onClose={() => store.toggleSidebarPanel('nostrConnect')}
+          onClose={() => store.toggleSidebarPanel('nostrConnectPanel')}
           onSavePrivateKey={privateKey =>
-            nostrSettings.setPrivateKey(privateKey)
+            nostrSettingsService.setPrivateKey(privateKey)
           }
         />
 
@@ -194,5 +194,5 @@ export default withServices(HypothesisApp, [
   'session',
   'settings',
   'toastMessenger',
-  'nostrSettings',
+  'nostrSettingsService',
 ]);

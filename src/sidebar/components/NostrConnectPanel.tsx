@@ -23,7 +23,7 @@ export default function NostrConnectPanel({
   onSavePrivateKey,
 }: NostrConnectPanelProps) {
   const store = useSidebarStore();
-  const isOpen = store.isSidebarPanelOpen('nostrConnect');
+  const isOpen = store.isSidebarPanelOpen('nostrConnectPanel');
   const [activeSubPanel, setActiveSubPanel] = useState<PanelKey>('nsec');
   const nsecRef = useRef<HTMLInputElement>(null);
   const [privateKey, setPrivateKey] = useState<Uint8Array | null>(
@@ -105,7 +105,7 @@ export default function NostrConnectPanel({
   return (
     <SidebarPanel
       title="Connect to Nostr"
-      panelName="nostrConnect"
+      panelName="nostrConnectPanel"
       onActiveChanged={active => !active && onClose()}
       variant="custom"
     >

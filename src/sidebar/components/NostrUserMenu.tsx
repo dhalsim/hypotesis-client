@@ -26,7 +26,7 @@ export default function NostrUserMenu({ onNostrLogout }: NostrUserMenuProps) {
 
   // Add this function to handle opening the NostrConnectPanel
   const openNostrConnectPanel = () => {
-    store.toggleSidebarPanel('nostrConnect');
+    store.toggleSidebarPanel('nostrConnectPanel');
     setOpen(false); // Close the menu after clicking
   };
 
