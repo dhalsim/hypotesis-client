@@ -10,8 +10,8 @@ export type PanelName =
   | 'loginPrompt'
   | 'shareGroupAnnotations'
   | 'searchAnnotations'
-  | 'nostrConnect';
-
+  | 'nostrConnectPanel';
+  
 /**
  * The top-level tabs in the sidebar interface. Used to reference which tab
  * is currently selected (active/visible).
