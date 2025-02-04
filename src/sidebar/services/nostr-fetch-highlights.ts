@@ -41,6 +41,9 @@ export class NostrFetchHighlightsService {
     onError
   }: HighlightsFetchOptions) {
     const store = this._store;
+
+    store.annotationFetchStarted();
+
     const adapter = this._nostrHighlightAdapterService;
     const relays = this._nostrRelaysService.getReadRelays();
     const pool = new SimplePool();
@@ -67,7 +70,7 @@ export class NostrFetchHighlightsService {
           store.addAnnotations([annotation] as Annotation[]);
         },
         oneose() {
-          
+          store.annotationFetchFinished();
         },
       }
     );

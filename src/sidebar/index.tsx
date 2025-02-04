@@ -192,6 +192,7 @@ function startApp(settings: SidebarSettings, appEl: HTMLElement) {
   container.run(syncRoute);
   container.run(initServices);
   container.run(setupApi);
+  // TODO: remove this once Nostr is fully implemented
   container.run(loadGroupsAndProfile);
   container.run(startRPCServer);
   container.run(setupFrameSync);

@@ -26,7 +26,7 @@ type APICall<
   Params = Record<string, Param | Param[]>,
   Body = void,
   Result = void,
-> = (params: Params, data?: Body, signal?: AbortSignal) => Promise<Result>;
+> = (params: Params, data?: Body, signal?: AbortSignal, serviceName?: string) => Promise<Result>;
 
 /**
  * Callbacks invoked at various points during an API call to get an access token etc.
@@ -42,9 +42,9 @@ type APIMethodCallbacks = {
   getClientId: () => string | null;
 
   /** Callback invoked when the API request starts */
-  onRequestStarted: () => void;
+  onRequestStarted: (serviceName: string) => void;
   /** Callback invoked when the API request finishes */
-  onRequestFinished: () => void;
+  onRequestFinished: (serviceName: string) => void;
 };
 
 function isRouteMetadata(
@@ -97,10 +97,10 @@ function createAPICall(
     getClientId,
     onRequestStarted,
     onRequestFinished,
-  }: APIMethodCallbacks,
+  }: APIMethodCallbacks
 ): APICall<Record<string, any>, Record<string, any> | void, unknown> {
   return async (params, data, signal) => {
-    onRequestStarted();
+    onRequestStarted(route);
     try {
       const [linksMap, token] = await Promise.all([links, getAccessToken()]);
       const descriptor = findRouteMetadata(linksMap, route);
@@ -150,7 +150,7 @@ function createAPICall(
         signal,
       });
     } finally {
-      onRequestFinished();
+      onRequestFinished(route);
     }
   };
 }
