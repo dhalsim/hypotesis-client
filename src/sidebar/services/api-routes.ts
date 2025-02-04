@@ -2,7 +2,6 @@ import type {
   IndexResponse,
   LinksResponse,
   RouteMap,
-  RouteMetadata,
 } from '../../types/api';
 import type { SidebarSettings } from '../../types/config';
 import { fetchJSON } from '../util/fetch';
@@ -29,12 +28,10 @@ function getJSON<T>(url: string): Promise<T> {
 export class APIRoutesService {
   private _apiURL: string;
   private _routeCache: Promise<RouteMap> | null;
-  private _linkCache: Promise<LinksResponse> | null;
 
   constructor(settings: SidebarSettings) {
     this._apiURL = settings.apiUrl;
     this._routeCache = null;
-    this._linkCache = null;
   }
 
   /**
@@ -57,13 +54,18 @@ export class APIRoutesService {
   /**
    * Fetch and cache service page links from the API.
    */
-  links(): Promise<LinksResponse> {
-    if (!this._linkCache) {
-      this._linkCache = this.routes().then(async routes => {
-        const linksRoute = routes.links as RouteMetadata;
-        return getJSON<LinksResponse>(linksRoute.url);
-      });
-    }
-    return this._linkCache;
+  async links(): Promise<LinksResponse> {
+    return {
+      "account.settings": "https://hypothes.is/account/settings",
+      "forgot-password": "https://hypothes.is/forgot-password",
+      "groups.new": "https://hypothes.is/groups/new",
+      "help": "https://hypothes.is/docs/help",
+      "oauth.authorize": "https://hypothes.is/oauth/authorize",
+      "oauth.revoke": "https://hypothes.is/oauth/revoke",
+      "search.tag": "https://hypothes.is/search?q=tag%3A%22:tag%22",
+      "signup": "https://hypothes.is/signup",
+      "user": "https://hypothes.is/u/:user",
+      "websocket": "wss://h-websocket.hypothes.is/ws"
+    };
   }
 }

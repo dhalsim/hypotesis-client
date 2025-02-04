@@ -73,18 +73,17 @@ export class AnnotationsService {
   ): Annotation {
     const defaultPrivacy = this._store.getDefault('annotationPrivacy');
     const groupid = this._store.focusedGroupId();
-    const profile = this._store.profile();
+    const profile = this._store.getProfile();
 
     if (!groupid) {
       throw new Error('Cannot create annotation without a group');
     }
 
-    const userid = profile.userid;
-    if (!userid) {
+    if (!profile) {
       throw new Error('Cannot create annotation when logged out');
     }
 
-    const userInfo = profile.user_info;
+    const userInfo = { display_name: profile.displayName };
 
     // We need a unique local/app identifier for this new annotation such
     // that we might look it up later in the store. It won't have an ID yet,
@@ -94,11 +93,11 @@ export class AnnotationsService {
       {
         created: now.toISOString(),
         group: groupid,
-        permissions: defaultPermissions(userid, groupid, defaultPrivacy),
+        permissions: defaultPermissions(profile.publicKeyHex, groupid, defaultPrivacy),
         tags: [],
         text: '',
         updated: now.toISOString(),
-        user: userid,
+        user: profile.publicKeyHex,
         user_info: userInfo,
         $tag,
         hidden: false,
@@ -110,7 +109,7 @@ export class AnnotationsService {
 
     // Highlights are peculiar in that they always have private permissions
     if (metadata.isHighlight(annotation)) {
-      annotation.permissions = privatePermissions(userid);
+      annotation.permissions = privatePermissions(profile.publicKeyHex);
     }
 
     // Attach information about the current context (eg. LMS assignment).

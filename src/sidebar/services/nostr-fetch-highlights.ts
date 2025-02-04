@@ -74,9 +74,14 @@ export class NostrFetchHighlightsService {
           onError?.(new Error(reasons.join('. ')))
         },
         async onevent(evt) {
-          const relays = Array.from(pool.seenOn.get(evt.id) ?? []).map((ar) => ar.url);
+          const relays = Array.from(pool.seenOn.get(evt.id) ?? [])
+            .map((ar) => ar.url);
 
-          const annotation = await adapter.convertHighlight({ event: evt, uri, relays });
+          const annotation = await adapter.convertToAnnotation({ 
+            event: evt, 
+            uri, 
+            relays 
+          });
           
           store.addAnnotations([annotation] as Annotation[]);
 
@@ -117,7 +122,8 @@ export class NostrFetchHighlightsService {
           onError?.(new Error(reasons.join('. ')))
         },
         async onevent(evt) {
-          const relays = Array.from(pool.seenOn.get(evt.id) ?? []).map((ar) => ar.url);
+          const relays = Array.from(pool.seenOn.get(evt.id) ?? [])
+            .map((ar) => ar.url);
 
           const annotation = await adapter.convertThread({ 
             threadEvent: evt, 

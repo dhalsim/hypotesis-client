@@ -2,7 +2,7 @@ import type { Event } from "nostr-tools";
 
 import type { NostrProfileService } from "./nostr-profile";
 
-import { nostrEventUrl } from "../helpers/nostr";
+import { nostrEventUrl, retryWithBackoff } from "../helpers/nostr";
 import type { APIAnnotationData } from "../../types/api";
 import type { SidebarStore } from "../store";
 import type { SidebarSettings } from "../../types/config";
@@ -42,7 +42,7 @@ export class NostrHighlightAdapterService {
     this._store = store;
   }
 
-  async convertHighlight({ 
+  async convertToAnnotation({ 
     event, 
     uri, 
     relays 
@@ -158,33 +158,6 @@ export class NostrHighlightAdapterService {
     };
   }
 
-  private async _retryWithBackoff<T>(
-    operation: (retryCount: number) => Promise<T>,
-    maxRetries: number = 3,
-    initialDelay: number = 100
-  ): Promise<T> {
-    let retryCount = 0;
-    
-    while (retryCount < maxRetries) {
-      try {
-        return await operation(retryCount);
-      } catch (error) {
-        retryCount++;
-        
-        if (retryCount === maxRetries) {
-          throw error;
-        }
-        
-        // Exponential backoff: 100ms, 500ms, 2500ms
-        const delay = initialDelay * Math.pow(5, retryCount - 1);
-        
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
-
-    throw new Error('Max retries reached');
-  }
-
   /**
    * Merge the references of the root highlight and recursively of all the thread events
    * 
@@ -227,7 +200,7 @@ export class NostrHighlightAdapterService {
     }
     
     // For thread replies, get the parent thread annotation
-    const threadAnnotation = await this._retryWithBackoff(
+    const threadAnnotation = await retryWithBackoff(
       async (retryCount: number) => {
         const annotation = await this._store.findAnnotationByID(threadReferenceId);
         

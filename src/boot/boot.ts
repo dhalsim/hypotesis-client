@@ -182,9 +182,9 @@ export function bootHypothesisClient(doc: Document, config: AnnotatorConfig) {
  * Bootstrap the sidebar application which displays annotations.
  */
 export function bootSidebarApp(doc: Document, config: SidebarAppConfig) {
+  // TODO: remove this
   // Preload `/api/` and `/api/links` API responses.
   preloadURL(doc, 'fetch', config.apiUrl);
-  preloadURL(doc, 'fetch', config.apiUrl + 'links');
 
   const scripts = ['scripts/sidebar.bundle.js'];
   for (const path of scripts) {

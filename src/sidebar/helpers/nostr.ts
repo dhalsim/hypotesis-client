@@ -52,3 +52,30 @@ export function nostrSearchUrl({ settings, store, searchTerm, tag }: NostrSearch
   
   return `${baseUrl}${query}${encodedTag}`;
 }
+
+export async function retryWithBackoff<T>(
+  operation: (retryCount: number) => Promise<T>,
+  maxRetries: number = 3,
+  initialDelay: number = 100
+): Promise<T> {
+  let retryCount = 0;
+  
+  while (retryCount < maxRetries) {
+    try {
+      return await operation(retryCount);
+    } catch (error) {
+      retryCount++;
+      
+      if (retryCount === maxRetries) {
+        throw error;
+      }
+      
+      // Exponential backoff: 100ms, 500ms, 2500ms
+      const delay = initialDelay * Math.pow(5, retryCount - 1);
+      
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  throw new Error('Max retries reached');
+}

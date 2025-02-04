@@ -407,15 +407,18 @@ export class FrameSyncService {
       // a meaningful highlight or annotation. Instead, we need to open the
       // sidebar, show an error, and delete the (unsaved) annotation so it gets
       // un-selected in the target document
-      const isLoggedIn = this._store.isLoggedIn();
+      const isLoggedIn = this._store.getProfile() !== null;
       const hasGroup = this._store.focusedGroup() !== null;
 
       if (!isLoggedIn || !hasGroup) {
         this._hostRPC.call('openSidebar');
+        
         if (!isLoggedIn) {
-          this._store.openSidebarPanel('loginPrompt');
+          this._store.openSidebarPanel('nostrConnectPanel');
         }
+        
         this._guestRPC.forEach(rpc => rpc.call('deleteAnnotation', annot.$tag));
+        
         return;
       }
 
