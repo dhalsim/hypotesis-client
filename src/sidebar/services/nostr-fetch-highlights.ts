@@ -17,6 +17,16 @@ export type HighlightsFetchOptions = {
   onError?: (error: Error) => void;
 };
 
+export type ThreadFetchOptions = {
+  referenceEventId: string;
+  
+  /**
+   * Optional error handler for SearchClient. Default error handling logs errors
+   * to console.
+   */
+  onError?: (error: Error) => void;
+};
+
 /**
  * @inject
  */
@@ -47,6 +57,7 @@ export class NostrFetchHighlightsService {
     const adapter = this._nostrHighlightAdapterService;
     const relays = this._nostrRelaysService.getReadRelays();
     const pool = new SimplePool();
+    const threadLoader = this.loadThread;
 
     pool.trackRelays = true;
 
@@ -65,9 +76,58 @@ export class NostrFetchHighlightsService {
         async onevent(evt) {
           const relays = Array.from(pool.seenOn.get(evt.id) ?? []).map((ar) => ar.url);
 
-          const annotation = await adapter.convert({ event: evt, uri, relays });
+          const annotation = await adapter.convertHighlight({ event: evt, uri, relays });
           
           store.addAnnotations([annotation] as Annotation[]);
+
+          // load threads
+          threadLoader({ 
+            referenceEventId: evt.id, 
+            onError 
+          });
+        },
+        oneose() {
+          store.annotationFetchFinished();
+        },
+      }
+    );
+  }
+
+  loadThread({ 
+    referenceEventId,
+    onError 
+  }: ThreadFetchOptions) {
+    const store = this._store;
+    const adapter = this._nostrHighlightAdapterService;
+    const relays = this._nostrRelaysService.getReadRelays();
+    const pool = new SimplePool();
+
+    store.annotationFetchStarted();
+
+    this._subCloser = pool.subscribeMany(
+      relays.map((relay) => relay.url),
+      [
+        {
+          kinds: [1111],
+          ['#E']: [referenceEventId]
+        }
+      ],
+      {
+        onclose(reasons) {
+          onError?.(new Error(reasons.join('. ')))
+        },
+        async onevent(evt) {
+          const relays = Array.from(pool.seenOn.get(evt.id) ?? []).map((ar) => ar.url);
+
+          const annotation = await adapter.convertThread({ 
+            threadEvent: evt, 
+            annotationId: referenceEventId, 
+            relays 
+          });
+
+          if (annotation) {
+            store.addAnnotations([annotation] as Annotation[]);
+          }
         },
         oneose() {
           store.annotationFetchFinished();

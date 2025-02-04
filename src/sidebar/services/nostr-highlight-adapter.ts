@@ -13,6 +13,17 @@ type ConvertHighlightOptions = {
   relays: string[];
 };
 
+type ConvertThreadOptions = {
+  threadEvent: Event;
+  annotationId: string;
+  relays: string[];
+};
+
+type MergeReferencesOptions = {
+  referencedAnnotation: APIAnnotationData;
+  event: Event;
+};
+
 /**
  * @inject
  */
@@ -31,7 +42,11 @@ export class NostrHighlightAdapterService {
     this._store = store;
   }
 
-  async convert({ event, uri, relays }: ConvertHighlightOptions): Promise<APIAnnotationData> {
+  async convertHighlight({ 
+    event, 
+    uri, 
+    relays 
+  }: ConvertHighlightOptions): Promise<APIAnnotationData> {
     const profile = await this._nostrProfileService.fetchProfile(event.pubkey);
 
     const createdAt = new Date(event.created_at * 1000).toISOString()
@@ -53,14 +68,11 @@ export class NostrHighlightAdapterService {
       // TODO: check Reports
       flagged: false,
       user: event.pubkey,
-      // TODO: Load profile and take the display_name
       user_info: {
         display_name: profile.displayName || null
       },
       // hashtags
-      tags: event.tags.filter(tag => tag[0] === 't')
-        .map(tag => tag[1] || '')
-        .filter(tag => tag !== ''),
+      tags: getHashtags(event),
       text: '',
       uri,
       permissions: {
@@ -85,6 +97,166 @@ export class NostrHighlightAdapterService {
       ],
     };
   }
+
+  async convertThread({ 
+    threadEvent, 
+    annotationId,
+    relays 
+  }: ConvertThreadOptions): Promise<APIAnnotationData | null> {
+    const referencedAnnotation = await this._store.findAnnotationByID(annotationId);
+    
+    if (!referencedAnnotation) {
+      console.warn(`
+        No referenced annotation found for event: ${threadEvent.id}, 
+        annotationId: ${annotationId}
+      `);
+
+      return null;
+    }
+    
+    const profile = await this._nostrProfileService.fetchProfile(threadEvent.pubkey);
+
+    const createdAt = new Date(threadEvent.created_at * 1000).toISOString()
+
+    const references = await this._mergeReferences({ 
+      referencedAnnotation, 
+      event: threadEvent 
+    });
+
+    return {
+      id: threadEvent.id,
+      created: createdAt,
+      updated: createdAt,
+      document: {
+        title: referencedAnnotation.document.title,
+      },
+      group: '__world__',
+      hidden: false,
+      links: {
+        html: nostrEventUrl({ settings: this._settings, store: this._store, event: threadEvent, relays })
+      },
+      // TODO: check Reports
+      flagged: false,
+      user: threadEvent.pubkey,
+      user_info: {
+        display_name: profile.displayName || null
+      },
+      tags: getHashtags(threadEvent),
+      text: '',
+      uri: referencedAnnotation.uri,
+      permissions: {
+        read: ['group:__world__'],
+        update: [],
+        delete: [],
+      },
+      target: [
+        {
+          source: referencedAnnotation.uri
+        },
+      ],
+      references,
+    };
+  }
+
+  private async _retryWithBackoff<T>(
+    operation: (retryCount: number) => Promise<T>,
+    maxRetries: number = 3,
+    initialDelay: number = 100
+  ): Promise<T> {
+    let retryCount = 0;
+    
+    while (retryCount < maxRetries) {
+      try {
+        return await operation(retryCount);
+      } catch (error) {
+        retryCount++;
+        
+        if (retryCount === maxRetries) {
+          throw error;
+        }
+        
+        // Exponential backoff: 100ms, 500ms, 2500ms
+        const delay = initialDelay * Math.pow(5, retryCount - 1);
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+
+    throw new Error('Max retries reached');
+  }
+
+  /**
+   * Merge the references of the root highlight and recursively of all the thread events
+   * 
+   * @param referencedAnnotation - the root highlight/annotation
+   * @param event - the current thread event
+   * @returns array of reference IDs in the thread chain
+   */
+  private async _mergeReferences({ 
+    referencedAnnotation, 
+    event 
+  }: MergeReferencesOptions): Promise<string[]> {
+    // Get the reference to the root annotation (uppercase 'E' tag)
+    const rootReferenceId = event.tags.find(tag => tag[0] === 'E')?.[1];
+
+    if (rootReferenceId !== referencedAnnotation.id) {
+      console.warn(`
+        Root reference ID mismatch for event: ${event.id}, 
+        expected: ${referencedAnnotation.id}, 
+        got: ${rootReferenceId}
+      `);
+      
+      return [];
+    }
+    
+    if (!rootReferenceId) {
+      console.warn(`
+        No root reference found for event: ${event.id}, 
+        referenced annotation: ${referencedAnnotation.id}
+      `);
+      
+      return referencedAnnotation.references || [];
+    }
+    
+    // Get the reference to parent thread event if exists (lowercase 'e' tag)
+    const threadReferenceId = event.tags.find(tag => tag[0] === 'e')?.[1];
+    
+    // If this is a root thread event (only has 'E' tag)
+    if (!threadReferenceId) {
+      return [rootReferenceId];
+    }
+    
+    // For thread replies, get the parent thread annotation
+    const threadAnnotation = await this._retryWithBackoff(
+      async (retryCount: number) => {
+        const annotation = await this._store.findAnnotationByID(threadReferenceId);
+        
+        if (!annotation) {
+          console.warn(`
+            No thread annotation found for event: ${event.id}, 
+            threadReferenceId: ${threadReferenceId},
+            attempt ${retryCount + 1}/3
+          `);
+          
+          throw new Error('Thread annotation not found');
+        }
+        return annotation;
+      }
+    ).catch(() => null);
+
+    if (!threadAnnotation) {
+      console.warn('Failed to fetch thread annotation after all retries');
+      
+      return [];
+    }
+
+    // Build the reference chain:
+    // Use parent's references (which include rootReferenceId) and append current threadReferenceId
+    return [
+      ...(threadAnnotation.references || []),
+      threadReferenceId
+    ];
+  }
 }
 
 // function to get the document title from the uri, we don't have it in the nostr event, so I put the domain as the title
@@ -102,4 +274,10 @@ function getDocumentTitle(uri: string) {
   }
 
   return domain;
+}
+
+function getHashtags(event: Event) {
+  return event.tags.filter(tag => tag[0] === 't')
+    .map(tag => tag[1] || '')
+    .filter(tag => tag !== '');
 }
