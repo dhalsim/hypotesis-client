@@ -57,7 +57,7 @@ export class NostrFetchHighlightsService {
     const adapter = this._nostrHighlightAdapterService;
     const relays = this._nostrRelaysService.getReadRelays();
     const pool = new SimplePool();
-    const threadLoader = this.loadThread;
+    const threadLoader = this.loadThread.bind(this);
 
     pool.trackRelays = true;
 

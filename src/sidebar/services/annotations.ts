@@ -231,13 +231,10 @@ export class AnnotationsService {
 
     if (!metadata.isSaved(annotation)) {
       saved = this._api.annotation.create({}, annotationWithChanges);
+      
       eventType = 'create';
     } else {
-      saved = this._api.annotation.update(
-        { id: annotation.id },
-        annotationWithChanges,
-      );
-      eventType = 'update';
+      throw new Error('Not implemented');
     }
 
     let savedAnnotation: Annotation;

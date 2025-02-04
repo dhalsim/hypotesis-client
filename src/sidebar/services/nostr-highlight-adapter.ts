@@ -1,4 +1,5 @@
-import type { Event } from "nostr-tools";
+import type { Event, EventTemplate } from "nostr-tools";
+import { kinds } from "nostr-tools";
 
 import type { NostrProfileService } from "./nostr-profile";
 
@@ -11,6 +12,11 @@ type ConvertHighlightOptions = {
   event: Event;
   uri: string;
   relays: string[];
+};
+
+type ConvertToEventOptions = {
+  annotation: APIAnnotationData;
+  tags: string[];
 };
 
 type ConvertThreadOptions = {
@@ -40,6 +46,27 @@ export class NostrHighlightAdapterService {
     this._nostrProfileService = nostrProfileService;
     this._settings = settings;
     this._store = store;
+  }
+
+  async convertToEvent({
+    annotation,
+    tags
+  }: ConvertToEventOptions): Promise<EventTemplate> {
+    const selector = annotation.target[0].selector?.find(
+      s => s.type === 'TextQuoteSelector'
+    );
+
+    if (!selector) {
+      throw new Error('No TextQuoteSelector found');
+    }
+    
+    
+    return {
+      kind: kinds.Highlights,
+      created_at: Math.floor(new Date(annotation.created).getTime() / 1000),
+      content: selector.exact,
+      tags: [["r", annotation.uri]].concat(tags.map(tag => ["t", tag])),
+    };
   }
 
   async convertToAnnotation({ 

@@ -9,16 +9,16 @@ import {
 } from '../../helpers/annotation-metadata';
 import { applyTheme } from '../../helpers/theme';
 import { withServices } from '../../service-context';
-import type { AnnotationsService } from '../../services/annotations';
+import { useSidebarStore } from '../../store';
 import type { TagsService } from '../../services/tags';
 import type { ToastMessengerService } from '../../services/toast-messenger';
-import { useSidebarStore } from '../../store';
+import type { NostrPublisherService } from '../../services/nostr-publisher';
 import type { Draft } from '../../store/modules/drafts';
+
 import MarkdownEditor from '../MarkdownEditor';
 import TagEditor from '../TagEditor';
 import AnnotationLicense from './AnnotationLicense';
 import AnnotationPublishControl from './AnnotationPublishControl';
-
 type AnnotationEditorProps = {
   /** The annotation under edit */
   annotation: Annotation;
@@ -26,7 +26,7 @@ type AnnotationEditorProps = {
   draft: Draft;
 
   // Injected
-  annotationsService: AnnotationsService;
+  nostrPublisherService: NostrPublisherService;
   settings: SidebarSettings;
   toastMessenger: ToastMessengerService;
   tags: TagsService;
@@ -38,7 +38,7 @@ type AnnotationEditorProps = {
 function AnnotationEditor({
   annotation,
   draft,
-  annotationsService,
+  nostrPublisherService,
   settings,
   tags: tagsService,
   toastMessenger,
@@ -55,7 +55,6 @@ function AnnotationEditor({
 
   const tags = draft.tags;
   const text = draft.text;
-  const isEmpty = !text && !tags.length;
 
   const onEditTags = useCallback(
     (tags: string[]) => {
@@ -112,20 +111,6 @@ function AnnotationEditor({
     [draft, store],
   );
 
-  const onSetPrivate = useCallback(
-    (isPrivate: boolean) => {
-      store.createDraft(annotation, {
-        ...draft,
-        isPrivate,
-      });
-      // Persist this as privacy default for future annotations unless this is a reply
-      if (!isReplyAnno) {
-        store.setDefault('annotationPrivacy', isPrivate ? 'private' : 'shared');
-      }
-    },
-    [annotation, draft, isReplyAnno, store],
-  );
-
   const onSave = async () => {
     // If there is any content in the tag editor input field that has
     // not been committed as a tag, go ahead and add it as a tag
@@ -137,7 +122,10 @@ function AnnotationEditor({
       isSaved(annotation) ? 'updated' : 'saved'
     }`;
     try {
-      await annotationsService.save(annotation);
+      const ret = await nostrPublisherService.publishAnnotation(annotation, tags);
+      // eslint-disable-next-line no-console
+      console.info(ret);
+      
       toastMessenger.success(successMessage, { visuallyHidden: true });
     } catch {
       toastMessenger.error('Saving annotation failed');
@@ -155,9 +143,7 @@ function AnnotationEditor({
   // Allow saving of annotation by pressing CMD/CTRL-Enter
   const onKeyDown = (event: KeyboardEvent) => {
     const key = event.key;
-    if (isEmpty) {
-      return;
-    }
+
     if ((event.metaKey || event.ctrlKey) && key === 'Enter') {
       event.stopPropagation();
       event.preventDefault();
@@ -177,6 +163,7 @@ function AnnotationEditor({
       className="space-y-4"
       onKeyDown={onKeyDown}
     >
+      {/* TODO: remove markdown editor or use textarea instead */}
       <MarkdownEditor
         textStyle={textStyle}
         label={isReplyAnno ? 'Enter reply' : 'Enter comment'}
@@ -194,11 +181,8 @@ function AnnotationEditor({
       {group && (
         <AnnotationPublishControl
           group={group}
-          isDisabled={isEmpty}
-          isPrivate={draft.isPrivate}
           onCancel={onCancel}
           onSave={onSave}
-          onSetPrivate={onSetPrivate}
         />
       )}
       {shouldShowLicense && <AnnotationLicense />}
@@ -207,7 +191,7 @@ function AnnotationEditor({
 }
 
 export default withServices(AnnotationEditor, [
-  'annotationsService',
+  'nostrPublisherService',
   'settings',
   'tags',
   'toastMessenger',
