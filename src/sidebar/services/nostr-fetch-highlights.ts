@@ -1,7 +1,6 @@
 import { SimplePool, kinds } from 'nostr-tools';
 import type { SubCloser } from 'nostr-tools/lib/types/abstract-pool';
 
-import type { Annotation } from "../../types/api";
 import type { SidebarStore } from '../store';
 
 import type { NostrRelaysService } from './nostr-relays';
@@ -18,7 +17,7 @@ export type HighlightsFetchOptions = {
 };
 
 export type ThreadFetchOptions = {
-  referenceEventId: string;
+  rootEventId: string;
   
   /**
    * Optional error handler for SearchClient. Default error handling logs errors
@@ -83,11 +82,11 @@ export class NostrFetchHighlightsService {
             relays 
           });
           
-          store.addAnnotations([annotation] as Annotation[]);
+          store.addAnnotations([annotation]);
 
           // load threads
           threadLoader({ 
-            referenceEventId: evt.id, 
+            rootEventId: evt.id, 
             onError 
           });
         },
@@ -99,7 +98,7 @@ export class NostrFetchHighlightsService {
   }
 
   loadThread({ 
-    referenceEventId,
+    rootEventId,
     onError 
   }: ThreadFetchOptions) {
     const store = this._store;
@@ -114,7 +113,7 @@ export class NostrFetchHighlightsService {
       [
         {
           kinds: [1111],
-          ['#E']: [referenceEventId]
+          ['#E']: [rootEventId]
         }
       ],
       {
@@ -127,12 +126,12 @@ export class NostrFetchHighlightsService {
 
           const annotation = await adapter.convertThread({ 
             threadEvent: evt, 
-            annotationId: referenceEventId, 
+            rootEventId, 
             relays 
           });
 
           if (annotation) {
-            store.addAnnotations([annotation] as Annotation[]);
+            store.addAnnotations([annotation]);
           }
         },
         oneose() {

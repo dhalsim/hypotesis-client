@@ -42,7 +42,7 @@ function TopBar({
   settings,
 }: TopBarProps) {
   const store = useSidebarStore();
-  const nostrProfile = store.getProfile();
+  const nostrProfile = store.getNostrProfile();
   const isNostrProfileLoading = store.isProfileLoading();
 
   const toggleSharePanel = () => {

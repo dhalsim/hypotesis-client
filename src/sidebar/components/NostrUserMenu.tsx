@@ -22,7 +22,7 @@ export type NostrUserMenuProps = {
  */
 export default function NostrUserMenu({ onNostrLogout, settings }: NostrUserMenuProps) {
   const store = useSidebarStore();
-  const profile = store.getProfile();
+  const profile = store.getNostrProfile();
   const isLoading = store.isProfileLoading();
   const [isOpen, setOpen] = useState(false);
 

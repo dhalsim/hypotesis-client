@@ -407,7 +407,7 @@ export class FrameSyncService {
       // a meaningful highlight or annotation. Instead, we need to open the
       // sidebar, show an error, and delete the (unsaved) annotation so it gets
       // un-selected in the target document
-      const isLoggedIn = this._store.getProfile() !== null;
+      const isLoggedIn = this._store.getNostrProfile() !== null;
       const hasGroup = this._store.focusedGroup() !== null;
 
       if (!isLoggedIn || !hasGroup) {
@@ -448,6 +448,7 @@ export class FrameSyncService {
         this._pendingHoverTag = null;
         guestRPC.call('hoverAnnotations', [$tag]);
       }
+      
       if (this._pendingScrollToTag) {
         if ($tag === this._pendingScrollToTag) {
           this._pendingScrollToTag = null;

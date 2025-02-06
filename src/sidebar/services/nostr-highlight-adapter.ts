@@ -1,34 +1,46 @@
-import type { Event, EventTemplate } from "nostr-tools";
+import type { NostrEvent, EventTemplate } from "nostr-tools";
 import { kinds } from "nostr-tools";
 
-import type { NostrProfileService } from "./nostr-profile";
+import { generateHexString } from '../../shared/random';
 
 import { nostrEventUrl, retryWithBackoff } from "../helpers/nostr";
-import type { APIAnnotationData } from "../../types/api";
+import type { 
+  RangeSelector, 
+  Annotation,
+  SavedAnnotation, 
+  Selector, 
+  TextPositionSelector, 
+  TextQuoteSelector 
+} from "../../types/api";
 import type { SidebarStore } from "../store";
 import type { SidebarSettings } from "../../types/config";
 
+import type { NostrProfileService } from "./nostr-profile";
+
 type ConvertHighlightOptions = {
-  event: Event;
+  event: NostrEvent;
   uri: string;
   relays: string[];
 };
 
-type ConvertToEventOptions = {
-  annotation: APIAnnotationData;
+type ConvertToReplyEventOptions = {
+  parentAnnotation: SavedAnnotation;
   tags: string[];
+  text: string;
 };
 
 type ConvertThreadOptions = {
-  threadEvent: Event;
-  annotationId: string;
+  threadEvent: NostrEvent;
+  rootEventId: string;
   relays: string[];
 };
 
 type MergeReferencesOptions = {
-  referencedAnnotation: APIAnnotationData;
-  event: Event;
+  rootAnnotation: SavedAnnotation;
+  event: NostrEvent;
 };
+
+type SupportedSelector = TextQuoteSelector | TextPositionSelector | RangeSelector;
 
 /**
  * @inject
@@ -37,6 +49,7 @@ export class NostrHighlightAdapterService {
   private _nostrProfileService: NostrProfileService;
   private _settings: SidebarSettings;
   private _store: SidebarStore;
+  private _currentUserId: string | null;
 
   constructor(
     nostrProfileService: NostrProfileService, 
@@ -46,26 +59,149 @@ export class NostrHighlightAdapterService {
     this._nostrProfileService = nostrProfileService;
     this._settings = settings;
     this._store = store;
+
+    this._currentUserId = store.getPublicKeyHex();
   }
 
-  async convertToEvent({
-    annotation,
-    tags
-  }: ConvertToEventOptions): Promise<EventTemplate> {
-    const selector = annotation.target[0].selector?.find(
+  async convertToEvent(annotation: Annotation): Promise<EventTemplate> {
+    if (!annotation.target[0].selector) {
+      throw new Error('No selector found');
+    }
+
+    const textQuoteSelector = annotation.target[0].selector.find(
       s => s.type === 'TextQuoteSelector'
     );
 
-    if (!selector) {
+    if (!textQuoteSelector) {
       throw new Error('No TextQuoteSelector found');
     }
-    
+
+    const selectors = annotation.target[0].selector?.filter(
+      s => s.type === 'TextPositionSelector' || 
+          s.type === 'RangeSelector'
+    );
     
     return {
       kind: kinds.Highlights,
       created_at: Math.floor(new Date(annotation.created).getTime() / 1000),
-      content: selector.exact,
-      tags: [["r", annotation.uri]].concat(tags.map(tag => ["t", tag])),
+      content: textQuoteSelector.exact,
+      tags: [
+        ["r", annotation.uri],
+        ...annotation.tags.map(tag => ["t", tag.toString()]),
+        ...this.serializeSelectors(textQuoteSelector, selectors),
+      ],
+    };
+  }
+
+  serializeSelectors(textQuoteSelector: TextQuoteSelector, selectors: Selector[]): string[][] {
+    const textPositionSelector = selectors.find(
+      s => s.type === 'TextPositionSelector'
+    );
+
+    const rangeSelector = selectors.find(
+      s => s.type === 'RangeSelector'
+    );
+
+    return [
+      [
+        textQuoteSelector.type.toLowerCase(), 
+        textQuoteSelector.exact, 
+        textQuoteSelector.prefix, 
+        textQuoteSelector.suffix
+      ].filter(Boolean) as string[],
+      textPositionSelector ? [
+        textPositionSelector.type.toLowerCase(), 
+        textPositionSelector.start.toString(), 
+        textPositionSelector.end.toString()
+      ] : [],
+      rangeSelector ? [
+        rangeSelector.type.toLowerCase(), 
+        rangeSelector.startContainer, 
+        rangeSelector.endContainer, 
+        rangeSelector.startOffset.toString(), 
+        rangeSelector.endOffset.toString()
+      ] : [],
+    ];
+  }
+
+  async convertToReplyEvent({
+    parentAnnotation,
+    tags,
+    text
+  }: ConvertToReplyEventOptions): Promise<EventTemplate> {
+    const parentAnnotationId = parentAnnotation.id;
+
+    if (!parentAnnotationId) {
+      throw new Error('Parent annotation does not have an id');
+    }
+
+    const rootAnnotationId = parentAnnotation.references?.[0];
+
+    const parentEvent = parentAnnotation.nostr_event;
+
+    let rootTags: string[][] = [];
+    let parentTags: string[][] = [];
+
+    if (rootAnnotationId) {
+      const rootAnnotation = await this._store.findAnnotationByID(rootAnnotationId);
+      
+      if (!rootAnnotation) {
+        throw new Error('No root annotation found');
+      }
+
+      if (!rootAnnotation.nostr_event) {
+        throw new Error('Root annotation does not have a Nostr event');
+      }
+
+      const rootEvent = rootAnnotation.nostr_event;
+
+      if (rootEvent.kind !== kinds.Highlights) {
+        throw new Error('Root annotation is not a highlight');
+      }
+      
+      rootTags = [
+        ["E", rootAnnotationId],
+        ["K", rootEvent.kind.toString()],
+        ["P", rootAnnotation.user],
+      ];
+
+      if (parentEvent.kind !== 1111) {
+        throw new Error('Parent annotation is not a reply');
+      }
+
+      parentTags = [
+        ["e", parentAnnotationId],
+        ["k", parentEvent.kind.toString()],
+        ["p", parentAnnotation.user],
+      ];
+    } else {
+      // parentAnnotation is the root annotation
+      if (parentEvent.kind !== kinds.Highlights) {
+        throw new Error('Parent annotation is not a highlight');
+      }
+
+      rootTags = [
+        ["E", parentAnnotationId],
+        ["K", parentEvent.kind.toString()],
+        ["P", parentAnnotation.user],
+      ];
+
+      parentTags = [
+        ["e", parentAnnotationId],
+        ["k", parentEvent.kind.toString()],
+        ["p", parentAnnotation.user],
+      ];
+    }
+
+    return {
+      kind: 1111,
+      created_at: Math.floor(Date.now() / 1000),
+      content: text,
+      tags: [
+        ...tags.map(tag => ['t', tag]),
+        ...rootTags,
+        ...parentTags,
+      ],
     };
   }
 
@@ -73,12 +209,18 @@ export class NostrHighlightAdapterService {
     event, 
     uri, 
     relays 
-  }: ConvertHighlightOptions): Promise<APIAnnotationData> {
+  }: ConvertHighlightOptions): Promise<SavedAnnotation> {
     const profile = await this._nostrProfileService.fetchProfile(event.pubkey);
+
+    const isCurrentUser = event.pubkey === this._currentUserId;
 
     const createdAt = new Date(event.created_at * 1000).toISOString()
 
     return {
+      $tag: 'a:' + generateHexString(8),
+      $highlight: false,
+      $cluster: isCurrentUser ? 'user-annotations' : 'other-content',
+      
       id: event.id,
       created: createdAt,
       updated: createdAt,
@@ -114,28 +256,73 @@ export class NostrHighlightAdapterService {
         {
           source: uri,
           // To make it an annotation, we need to have at least one selector
-          selector: [
-            {
-              type: 'TextQuoteSelector',
-              exact: event.content,
-            },
-          ],
+          selector: this.deserializeSelectors(event),
         },
       ],
+      nostr_event: event,
     };
+  }
+
+  deserializeSelectors(event: NostrEvent): SupportedSelector[] {
+    const tags = event.tags;
+    
+    let textQuoteTag = tags.find(tag => tag[0] === 'textquoteselector');
+
+    if (!textQuoteTag) {
+      textQuoteTag = ['textquoteselector', event.content];
+    }
+
+    const textQuoteSelector: TextQuoteSelector = {
+      type: 'TextQuoteSelector',
+      exact: textQuoteTag[1],
+      prefix: textQuoteTag[2],
+      suffix: textQuoteTag[3],
+    };
+
+    const textPositionTag = tags.find(tag => tag[0] === 'textpositionselector');
+
+    let textPositionSelector: TextPositionSelector | undefined;
+
+    if (textPositionTag) {
+      textPositionSelector = {
+        type: 'TextPositionSelector',
+        start: parseInt(textPositionTag[1]),
+        end: parseInt(textPositionTag[2]),
+      };
+    }
+
+    const rangeTag = tags.find(tag => tag[0] === 'rangeselector');
+
+    let rangeSelector: RangeSelector | undefined;
+
+    if (rangeTag) {
+      rangeSelector = {
+        type: 'RangeSelector',
+        startContainer: rangeTag[1],
+        endContainer: rangeTag[2],
+        startOffset: parseInt(rangeTag[3]),
+        endOffset: parseInt(rangeTag[4]),
+      };
+    }
+
+    return [
+      textQuoteSelector, 
+      textPositionSelector, 
+      rangeSelector
+    ].filter(Boolean) as SupportedSelector[];
   }
 
   async convertThread({ 
     threadEvent, 
-    annotationId,
+    rootEventId,
     relays 
-  }: ConvertThreadOptions): Promise<APIAnnotationData | null> {
-    const referencedAnnotation = await this._store.findAnnotationByID(annotationId);
+  }: ConvertThreadOptions): Promise<SavedAnnotation | null> {
+    const rootAnnotation = this._store.findAnnotationByID(rootEventId);
     
-    if (!referencedAnnotation) {
+    if (!rootAnnotation) {
       console.warn(`
-        No referenced annotation found for event: ${threadEvent.id}, 
-        annotationId: ${annotationId}
+        No root annotation found for event: ${threadEvent.id}, 
+        rootEventId: ${rootEventId}
       `);
 
       return null;
@@ -146,16 +333,22 @@ export class NostrHighlightAdapterService {
     const createdAt = new Date(threadEvent.created_at * 1000).toISOString()
 
     const references = await this._mergeReferences({ 
-      referencedAnnotation, 
+      rootAnnotation, 
       event: threadEvent 
     });
 
+    const isCurrentUser = threadEvent.pubkey === this._currentUserId;
+
     return {
+      $highlight: false,
+      $cluster: isCurrentUser ? 'user-annotations' : 'other-content',
+      $tag: 'a:' + generateHexString(8),
+
       id: threadEvent.id,
       created: createdAt,
       updated: createdAt,
       document: {
-        title: referencedAnnotation.document.title,
+        title: rootAnnotation.document.title,
       },
       group: '__world__',
       hidden: false,
@@ -169,8 +362,8 @@ export class NostrHighlightAdapterService {
         display_name: profile.displayName || null
       },
       tags: getHashtags(threadEvent),
-      text: '',
-      uri: referencedAnnotation.uri,
+      text: threadEvent.content,
+      uri: rootAnnotation.uri,
       permissions: {
         read: ['group:__world__'],
         update: [],
@@ -178,10 +371,11 @@ export class NostrHighlightAdapterService {
       },
       target: [
         {
-          source: referencedAnnotation.uri
+          source: rootAnnotation.uri
         },
       ],
       references,
+      nostr_event: threadEvent,
     };
   }
 
@@ -193,68 +387,52 @@ export class NostrHighlightAdapterService {
    * @returns array of reference IDs in the thread chain
    */
   private async _mergeReferences({ 
-    referencedAnnotation, 
+    rootAnnotation, 
     event 
   }: MergeReferencesOptions): Promise<string[]> {
     // Get the reference to the root annotation (uppercase 'E' tag)
     const rootReferenceId = event.tags.find(tag => tag[0] === 'E')?.[1];
 
-    if (rootReferenceId !== referencedAnnotation.id) {
-      console.warn(`
-        Root reference ID mismatch for event: ${event.id}, 
-        expected: ${referencedAnnotation.id}, 
-        got: ${rootReferenceId}
-      `);
-      
-      return [];
-    }
-    
-    if (!rootReferenceId) {
-      console.warn(`
-        No root reference found for event: ${event.id}, 
-        referenced annotation: ${referencedAnnotation.id}
-      `);
-      
-      return referencedAnnotation.references || [];
+    if (rootReferenceId !== rootAnnotation.id) {
+      throw new Error('Root reference ID does not match root annotation ID');
     }
     
     // Get the reference to parent thread event if exists (lowercase 'e' tag)
-    const threadReferenceId = event.tags.find(tag => tag[0] === 'e')?.[1];
+    const parentAnnotationId = event.tags.find(tag => tag[0] === 'e')?.[1];
     
     // If this is a root thread event (only has 'E' tag)
-    if (!threadReferenceId) {
+    if (!parentAnnotationId) {
       return [rootReferenceId];
     }
     
     // For thread replies, get the parent thread annotation
-    const threadAnnotation = await retryWithBackoff(
+    const parentAnnotation = await retryWithBackoff(
       async (retryCount: number) => {
-        const annotation = await this._store.findAnnotationByID(threadReferenceId);
+        const parentAnnotation = this._store.findAnnotationByID(parentAnnotationId);
         
-        if (!annotation) {
+        if (!parentAnnotation) {
           console.warn(`
             No thread annotation found for event: ${event.id}, 
-            threadReferenceId: ${threadReferenceId},
+            threadReferenceId: ${parentAnnotationId},
             attempt ${retryCount + 1}/3
           `);
           
           throw new Error('Thread annotation not found');
         }
-        return annotation;
+        
+        return parentAnnotation;
       }
-    ).catch(() => null);
+    );
 
-    if (!threadAnnotation) {
-      console.warn('Failed to fetch thread annotation after all retries');
-      
-      return [];
+    if (!parentAnnotation) {
+      throw new Error('Failed to fetch thread annotation after all retries');
     }
 
     // Build the reference chain:
     // Use parent's references (which include rootReferenceId) and append current threadReferenceId
     return [
-      ...(threadAnnotation.references || []),
-      threadReferenceId
+      ...(parentAnnotation.references || []),
+      parentAnnotationId
     ];
   }
 }
@@ -276,7 +454,7 @@ function getDocumentTitle(uri: string) {
   return domain;
 }
 
-function getHashtags(event: Event) {
+function getHashtags(event: NostrEvent) {
   return event.tags.filter(tag => tag[0] === 't')
     .map(tag => tag[1] || '')
     .filter(tag => tag !== '');

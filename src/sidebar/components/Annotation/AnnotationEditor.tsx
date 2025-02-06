@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useState } from 'preact/hooks';
-
 import type { Annotation } from '../../../types/api';
+
 import type { SidebarSettings } from '../../../types/config';
+
 import {
   annotationRole,
   isReply,
@@ -12,13 +13,14 @@ import { withServices } from '../../service-context';
 import { useSidebarStore } from '../../store';
 import type { TagsService } from '../../services/tags';
 import type { ToastMessengerService } from '../../services/toast-messenger';
-import type { NostrPublisherService } from '../../services/nostr-publisher';
+import type { AnnotationsService } from '../../services/annotations';
 import type { Draft } from '../../store/modules/drafts';
 
 import MarkdownEditor from '../MarkdownEditor';
 import TagEditor from '../TagEditor';
 import AnnotationLicense from './AnnotationLicense';
 import AnnotationPublishControl from './AnnotationPublishControl';
+
 type AnnotationEditorProps = {
   /** The annotation under edit */
   annotation: Annotation;
@@ -26,7 +28,7 @@ type AnnotationEditorProps = {
   draft: Draft;
 
   // Injected
-  nostrPublisherService: NostrPublisherService;
+  annotationsService: AnnotationsService;
   settings: SidebarSettings;
   toastMessenger: ToastMessengerService;
   tags: TagsService;
@@ -38,7 +40,7 @@ type AnnotationEditorProps = {
 function AnnotationEditor({
   annotation,
   draft,
-  nostrPublisherService,
+  annotationsService,
   settings,
   tags: tagsService,
   toastMessenger,
@@ -122,12 +124,12 @@ function AnnotationEditor({
       isSaved(annotation) ? 'updated' : 'saved'
     }`;
     try {
-      const ret = await nostrPublisherService.publishAnnotation(annotation, tags);
-      // eslint-disable-next-line no-console
-      console.info(ret);
+      await annotationsService.save(annotation);
       
       toastMessenger.success(successMessage, { visuallyHidden: true });
-    } catch {
+    } catch (error) {
+      console.error(error);
+      
       toastMessenger.error('Saving annotation failed');
     }
   };
@@ -191,7 +193,7 @@ function AnnotationEditor({
 }
 
 export default withServices(AnnotationEditor, [
-  'nostrPublisherService',
+  'annotationsService',
   'settings',
   'tags',
   'toastMessenger',

@@ -100,7 +100,7 @@ function excludeAnnotations(
 }
 
 function findByID(annotations: Annotation[], id: string) {
-  return annotations.find(a => a.id === id);
+  return annotations.find(a => a.id === id) as SavedAnnotation | undefined;
 }
 
 function findByTag(annotations: Annotation[], tag: string) {

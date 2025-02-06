@@ -104,8 +104,12 @@ function getConnectMode(state: State) {
   return state.connectMode;
 }
 
-function getProfile(state: State) {
+function getNostrProfile(state: State) {
   return state.profile;
+}
+
+function isNostrLoggedIn(state: State) {
+  return state.profile?.publicKeyHex !== null;
 }
 
 function isProfileLoading(state: State) {
@@ -138,7 +142,8 @@ export const nostrModule = createStoreModule(initialState, {
     getPrivateKey,
     getPublicKeyHex,
     getConnectMode,
-    getProfile,
+    getNostrProfile,
+    isNostrLoggedIn,
     isProfileLoading,
     getNostrProfileUrl,
     getNostrEventUrl,

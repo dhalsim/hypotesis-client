@@ -25,9 +25,11 @@ import AnnotationShareControl from './AnnotationShareControl';
 
 function flaggingEnabled(settings: SidebarSettings) {
   const service = serviceConfig(settings);
+  
   if (service?.allowFlagging === false) {
     return false;
   }
+  
   return true;
 }
 
@@ -55,12 +57,18 @@ function AnnotationActionBar({
   toastMessenger,
 }: AnnotationActionBarProps) {
   const store = useSidebarStore();
-  const userProfile = store.profile();
-  const isLoggedIn = store.isLoggedIn();
+  const userProfile = store.getNostrProfile();
+  const isLoggedIn = userProfile !== null;
 
   // Is the current user allowed to take the given `action` on this annotation?
   const userIsAuthorizedTo = (action: 'update' | 'delete') => {
-    return permits(annotation.permissions, action, userProfile.userid);
+    return permits(
+      annotation.permissions,
+      action,
+      isLoggedIn 
+        ? userProfile.publicKeyHex 
+        : null,
+    );
   };
 
   const showDeleteAction = userIsAuthorizedTo('delete');
@@ -69,8 +77,8 @@ function AnnotationActionBar({
   //  Only authenticated users can flag an annotation, except the annotation's author.
   const showFlagAction =
     flaggingEnabled(settings) &&
-    !!userProfile.userid &&
-    userProfile.userid !== annotation.user;
+    !!userProfile?.publicKeyHex &&
+    userProfile.publicKeyHex !== annotation.user;
 
   const shareLink =
     sharingEnabled(settings) && annotationSharingLink(annotation);
@@ -109,9 +117,11 @@ function AnnotationActionBar({
 
   const onReplyClick = () => {
     if (!isLoggedIn) {
-      store.openSidebarPanel('loginPrompt');
+      store.openSidebarPanel('nostrConnectPanel');
+      
       return;
     }
+    
     onReply();
   };
 
