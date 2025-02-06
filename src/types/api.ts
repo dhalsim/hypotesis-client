@@ -1,3 +1,5 @@
+import type { NostrEvent } from 'nostr-tools';
+
 import type { ClientAnnotationData } from './shared';
 
 /**
@@ -222,6 +224,11 @@ export type APIAnnotationData = {
    * current assignment, course etc. to annotations.
    */
   metadata?: object;
+
+  /**
+   * The Nostr event that was used to create the annotation.
+   */
+  nostr_event?: NostrEvent;
 };
 
 /**
@@ -233,7 +240,7 @@ export type Annotation = ClientAnnotationData & APIAnnotationData;
 /**
  * An annotation which has been saved to the backend and assigned an ID.
  */
-export type SavedAnnotation = Annotation & { id: string };
+export type SavedAnnotation = Annotation & { id: string, nostr_event: NostrEvent };
 
 export type Profile = {
   userid: string | null;

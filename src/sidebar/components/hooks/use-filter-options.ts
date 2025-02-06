@@ -1,7 +1,7 @@
 import { useMemo } from 'preact/hooks';
 
 import { username } from '../../helpers/account-id';
-import { annotationDisplayName } from '../../helpers/annotation-user';
+import { annotationNostrDisplayName } from '../../helpers/annotation-user';
 import { useSidebarStore } from '../../store';
 import type { FilterOption } from '../../store/modules/filters';
 
@@ -14,19 +14,13 @@ export function useUserFilterOptions(): FilterOption[] {
   const annotations = store.allAnnotations();
   const focusFilters = store.getFocusFilters();
   const currentUsername = username(store.profile().userid);
-  const defaultAuthority = store.defaultAuthority();
-  const displayNamesEnabled = store.isFeatureEnabled('client_display_names');
 
   return useMemo(() => {
     // Determine unique users (authors) in annotation collection
     const users: Record<string, string> = {};
     annotations.forEach(annotation => {
       const username_ = username(annotation.user);
-      users[username_] = annotationDisplayName(
-        annotation,
-        defaultAuthority,
-        displayNamesEnabled,
-      );
+      users[username_] = annotationNostrDisplayName(annotation);
     });
 
     // If user-focus is configured (even if not applied) add a filter
@@ -62,8 +56,6 @@ export function useUserFilterOptions(): FilterOption[] {
   }, [
     annotations,
     currentUsername,
-    defaultAuthority,
-    displayNamesEnabled,
     focusFilters.user,
   ]);
 }

@@ -1,6 +1,5 @@
 import {
   LinkButton,
-  HighlightIcon,
   LockIcon,
 } from '@hypothesis/frontend-shared';
 import { useMemo } from 'preact/hooks';
@@ -9,15 +8,11 @@ import type { Annotation } from '../../../types/api';
 import type { SidebarSettings } from '../../../types/config';
 import {
   domainAndTitle,
-  isHighlight,
   isReply,
   hasBeenEdited,
   pageLabel as getPageLabel,
 } from '../../helpers/annotation-metadata';
-import {
-  annotationAuthorLink,
-  annotationDisplayName,
-} from '../../helpers/annotation-user';
+import { annotationNostrDisplayName } from '../../helpers/annotation-user';
 import { isPrivate } from '../../helpers/permissions';
 import { withServices } from '../../service-context';
 import { useSidebarStore } from '../../store';
@@ -25,6 +20,7 @@ import AnnotationDocumentInfo from './AnnotationDocumentInfo';
 import AnnotationGroupInfo from './AnnotationGroupInfo';
 import AnnotationTimestamps from './AnnotationTimestamps';
 import AnnotationUser from './AnnotationUser';
+import { nostrProfileUrl } from '../../helpers/nostr';
 
 export type AnnotationHeaderProps = {
   annotation: Annotation;
@@ -52,19 +48,15 @@ function AnnotationHeader({
 }: AnnotationHeaderProps) {
   const store = useSidebarStore();
 
-  const defaultAuthority = store.defaultAuthority();
-  const displayNamesEnabled = store.isFeatureEnabled('client_display_names');
-  const userURL = store.getLink('user', { user: annotation.user });
-
   const authorName = useMemo(
     () =>
-      annotationDisplayName(annotation, defaultAuthority, displayNamesEnabled),
-    [annotation, defaultAuthority, displayNamesEnabled],
+      annotationNostrDisplayName(annotation),
+    [annotation],
   );
 
   const authorLink = useMemo(
-    () => annotationAuthorLink(annotation, settings, defaultAuthority, userURL),
-    [annotation, settings, defaultAuthority, userURL],
+    () => nostrProfileUrl({ settings, store, pubkey: annotation.user }),
+    [annotation, settings, store],
   );
 
   const isCollapsedReply = isReply(annotation) && threadIsCollapsed;
@@ -150,12 +142,6 @@ function AnnotationHeader({
           data-testid="extended-header-info"
         >
           {group && <AnnotationGroupInfo group={group} />}
-          {!isEditing && isHighlight(annotation) && (
-            <HighlightIcon
-              title="This is a highlight. Click 'edit' to add a note or tag."
-              className="w-[10px] h-[10px] text-color-text-light"
-            />
-          )}
           {(showDocumentInfo || pageNumber) && (
             <span className="flex">
               {showDocumentInfo && (

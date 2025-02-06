@@ -1,7 +1,9 @@
-import { useCallback, useMemo, useState } from 'preact/hooks';
-
+import classnames from 'classnames';
+import { useCallback, useMemo, useRef, useState } from 'preact/hooks';
 import type { Annotation } from '../../../types/api';
+
 import type { SidebarSettings } from '../../../types/config';
+
 import {
   annotationRole,
   isReply,
@@ -9,15 +11,16 @@ import {
 } from '../../helpers/annotation-metadata';
 import { applyTheme } from '../../helpers/theme';
 import { withServices } from '../../service-context';
-import type { AnnotationsService } from '../../services/annotations';
+import { useSidebarStore } from '../../store';
 import type { TagsService } from '../../services/tags';
 import type { ToastMessengerService } from '../../services/toast-messenger';
-import { useSidebarStore } from '../../store';
+import type { AnnotationsService } from '../../services/annotations';
 import type { Draft } from '../../store/modules/drafts';
-import MarkdownEditor from '../MarkdownEditor';
+
 import TagEditor from '../TagEditor';
 import AnnotationLicense from './AnnotationLicense';
 import AnnotationPublishControl from './AnnotationPublishControl';
+import TextArea from '../TextAreaEditor';
 
 type AnnotationEditorProps = {
   /** The annotation under edit */
@@ -55,7 +58,6 @@ function AnnotationEditor({
 
   const tags = draft.tags;
   const text = draft.text;
-  const isEmpty = !text && !tags.length;
 
   const onEditTags = useCallback(
     (tags: string[]) => {
@@ -112,20 +114,6 @@ function AnnotationEditor({
     [draft, store],
   );
 
-  const onSetPrivate = useCallback(
-    (isPrivate: boolean) => {
-      store.createDraft(annotation, {
-        ...draft,
-        isPrivate,
-      });
-      // Persist this as privacy default for future annotations unless this is a reply
-      if (!isReplyAnno) {
-        store.setDefault('annotationPrivacy', isPrivate ? 'private' : 'shared');
-      }
-    },
-    [annotation, draft, isReplyAnno, store],
-  );
-
   const onSave = async () => {
     // If there is any content in the tag editor input field that has
     // not been committed as a tag, go ahead and add it as a tag
@@ -138,8 +126,11 @@ function AnnotationEditor({
     }`;
     try {
       await annotationsService.save(annotation);
+      
       toastMessenger.success(successMessage, { visuallyHidden: true });
-    } catch {
+    } catch (error) {
+      console.error(error);
+      
       toastMessenger.error('Saving annotation failed');
     }
   };
@@ -155,9 +146,7 @@ function AnnotationEditor({
   // Allow saving of annotation by pressing CMD/CTRL-Enter
   const onKeyDown = (event: KeyboardEvent) => {
     const key = event.key;
-    if (isEmpty) {
-      return;
-    }
+
     if ((event.metaKey || event.ctrlKey) && key === 'Enter') {
       event.stopPropagation();
       event.preventDefault();
@@ -167,8 +156,9 @@ function AnnotationEditor({
 
   const textStyle = applyTheme(['annotationFontFamily'], settings);
 
-  const mentionsEnabled = store.isFeatureEnabled('at_mentions');
-  const usersWhoAnnotated = store.usersWhoAnnotated();
+  const label = 'Enter reply';
+  // The input element where the user inputs their comment.
+  const input = useRef<HTMLTextAreaElement>(null);
 
   return (
     /* eslint-disable-next-line jsx-a11y/no-static-element-interactions */
@@ -177,14 +167,25 @@ function AnnotationEditor({
       className="space-y-4"
       onKeyDown={onKeyDown}
     >
-      <MarkdownEditor
-        textStyle={textStyle}
-        label={isReplyAnno ? 'Enter reply' : 'Enter comment'}
-        text={text}
-        onEditText={onEditText}
-        mentionsEnabled={mentionsEnabled}
-        usersForMentions={usersWhoAnnotated}
-      />
+      {isReplyAnno && (
+        <TextArea
+          aria-label={label}
+          placeholder={label}
+          dir="auto"
+          classes={classnames(
+            'w-full min-h-[8em] resize-y',
+            // Turn off border-radius on top edges to align with toolbar above
+            'rounded-t-none',
+            // Larger font on touch devices
+            'text-base touch:text-touch-base',
+          )}
+          containerRef={input}
+          onKeyDown={onKeyDown}
+          onEditText={onEditText}
+          value={text}
+          style={textStyle}
+        />
+      )}
       <TagEditor
         onAddTag={onAddTag}
         onRemoveTag={onRemoveTag}
@@ -194,11 +195,8 @@ function AnnotationEditor({
       {group && (
         <AnnotationPublishControl
           group={group}
-          isDisabled={isEmpty}
-          isPrivate={draft.isPrivate}
           onCancel={onCancel}
           onSave={onSave}
-          onSetPrivate={onSetPrivate}
         />
       )}
       {shouldShowLicense && <AnnotationLicense />}

@@ -2,10 +2,11 @@ import { generateHexString } from '../../shared/random';
 import type { AnnotationData } from '../../types/annotator';
 import type {
   APIAnnotationData,
-  Annotation,
   SavedAnnotation,
+  Annotation,
 } from '../../types/api';
 import type { AnnotationEventType, SidebarSettings } from '../../types/config';
+
 import * as metadata from '../helpers/annotation-metadata';
 import {
   defaultPermissions,
@@ -13,8 +14,10 @@ import {
   sharedPermissions,
 } from '../helpers/permissions';
 import type { SidebarStore } from '../store';
+
 import type { AnnotationActivityService } from './annotation-activity';
 import type { APIService } from './api';
+import type { NostrPublisherService } from './nostr-publisher';
 
 /**
  * A service for creating, updating and persisting annotations both in the
@@ -24,17 +27,20 @@ import type { APIService } from './api';
 export class AnnotationsService {
   private _activity: AnnotationActivityService;
   private _api: APIService;
+  private _nostrPublisherService: NostrPublisherService;
   private _settings: SidebarSettings;
   private _store: SidebarStore;
 
   constructor(
     annotationActivity: AnnotationActivityService,
     api: APIService,
+    nostrPublisherService: NostrPublisherService,
     settings: SidebarSettings,
     store: SidebarStore,
   ) {
     this._activity = annotationActivity;
     this._api = api;
+    this._nostrPublisherService = nostrPublisherService;
     this._settings = settings;
     this._store = store;
   }
@@ -66,39 +72,37 @@ export class AnnotationsService {
    * values.
    */
   annotationFromData(
-    annotationData: Partial<APIAnnotationData> &
-      Pick<AnnotationData, 'uri' | 'target'>,
-    /* istanbul ignore next */
-    now: Date = new Date(),
+    annotationData: 
+      Partial<APIAnnotationData> & Pick<APIAnnotationData, 'uri' | 'target'>,
+    now: Date = new Date()
   ): Annotation {
     const defaultPrivacy = this._store.getDefault('annotationPrivacy');
     const groupid = this._store.focusedGroupId();
-    const profile = this._store.profile();
+    const profile = this._store.getNostrProfile();
 
     if (!groupid) {
       throw new Error('Cannot create annotation without a group');
     }
 
-    const userid = profile.userid;
-    if (!userid) {
+    if (!profile) {
       throw new Error('Cannot create annotation when logged out');
     }
 
-    const userInfo = profile.user_info;
+    const userInfo = { display_name: profile.displayName };
 
     // We need a unique local/app identifier for this new annotation such
     // that we might look it up later in the store. It won't have an ID yet,
     // as it has not been persisted to the service.
     const $tag = `s:${generateHexString(8)}`;
-    const annotation: Annotation = Object.assign(
+    const annotation: Omit<Annotation, 'nostr_event' | 'id'> = Object.assign(
       {
         created: now.toISOString(),
         group: groupid,
-        permissions: defaultPermissions(userid, groupid, defaultPrivacy),
+        permissions: defaultPermissions(profile.publicKeyHex, groupid, defaultPrivacy),
         tags: [],
         text: '',
         updated: now.toISOString(),
-        user: userid,
+        user: profile.publicKeyHex,
         user_info: userInfo,
         $tag,
         hidden: false,
@@ -110,7 +114,7 @@ export class AnnotationsService {
 
     // Highlights are peculiar in that they always have private permissions
     if (metadata.isHighlight(annotation)) {
-      annotation.permissions = privatePermissions(userid);
+      annotation.permissions = privatePermissions(profile.publicKeyHex);
     }
 
     // Attach information about the current context (eg. LMS assignment).
@@ -126,7 +130,10 @@ export class AnnotationsService {
    * Create a draft for it unless it's a highlight and clear other empty
    * drafts out of the way.
    */
-  create(annotationData: Omit<AnnotationData, '$tag'>, now = new Date()) {
+  create(
+    annotationData: Omit<AnnotationData, '$tag' | 'id' | 'nostr_event'>, 
+    now = new Date()
+  ) {
     const annotation = this.annotationFromData(annotationData, now);
 
     this._store.addAnnotations([annotation]);
@@ -167,13 +174,17 @@ export class AnnotationsService {
    */
   createPageNote() {
     const topLevelFrame = this._store.mainFrame();
-    if (!this._store.isLoggedIn()) {
-      this._store.openSidebarPanel('loginPrompt');
+    
+    if (!this._store.isNostrLoggedIn()) {
+      this._store.openSidebarPanel('nostrConnectPanel');
+      
       return;
     }
+    
     if (!topLevelFrame) {
       return;
     }
+    
     const pageNoteAnnotation = {
       target: [
         {
@@ -182,6 +193,7 @@ export class AnnotationsService {
       ],
       uri: topLevelFrame.uri,
     };
+    
     this.create(pageNoteAnnotation);
   }
 
@@ -225,23 +237,42 @@ export class AnnotationsService {
    * to the store.
    */
   async save(annotation: Annotation) {
-    let saved: Promise<Annotation>;
+    let saved: Promise<SavedAnnotation>;
     let eventType: AnnotationEventType;
 
     const annotationWithChanges = this._applyDraftChanges(annotation);
 
     if (!metadata.isSaved(annotation)) {
-      saved = this._api.annotation.create({}, annotationWithChanges);
+      // saved = this._api.annotation.create({}, annotationWithChanges);
+
+      if (metadata.isReply(annotation)) {
+        const parentAnnotation = this._store.findAnnotationByID(
+          annotation.references?.[annotation.references.length - 1] as string
+        );
+
+        if (!parentAnnotation) {
+          throw new Error('Parent annotation not found');
+        }
+
+        if (!(parentAnnotation.id && parentAnnotation.nostr_event)) {
+          throw new Error('Parent annotation does not have an id or Nostr event');
+        }
+
+        saved = this._nostrPublisherService.publishReply({
+          parentAnnotation: parentAnnotation as SavedAnnotation,
+          tags: annotationWithChanges.tags,
+          text: annotationWithChanges.text,
+        });
+      } else {
+        saved = this._nostrPublisherService.publishAnnotation(annotationWithChanges);
+      }
+      
       eventType = 'create';
     } else {
-      saved = this._api.annotation.update(
-        { id: annotation.id },
-        annotationWithChanges,
-      );
-      eventType = 'update';
+      throw new Error('Not implemented');
     }
 
-    let savedAnnotation: Annotation;
+    let savedAnnotation: SavedAnnotation;
     this._store.annotationSaveStarted(annotation);
     try {
       savedAnnotation = await saved;
@@ -264,6 +295,7 @@ export class AnnotationsService {
 
     // Add (or, in effect, update) the annotation to the store's collection
     this._store.addAnnotations([savedAnnotation]);
+    
     return savedAnnotation;
   }
 }

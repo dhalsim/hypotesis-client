@@ -2,14 +2,14 @@ import { CardActions, Spinner } from '@hypothesis/frontend-shared';
 import classnames from 'classnames';
 import { useMemo } from 'preact/hooks';
 
-import type { Annotation as IAnnotation } from '../../../types/api';
+import type { Annotation } from '../../../types/api';
 import {
   annotationRole,
   isOrphan,
   isSaved,
   quote,
 } from '../../helpers/annotation-metadata';
-import { annotationDisplayName } from '../../helpers/annotation-user';
+import { annotationNostrDisplayName } from '../../helpers/annotation-user';
 import { withServices } from '../../service-context';
 import type { AnnotationsService } from '../../services/annotations';
 import { useSidebarStore } from '../../store';
@@ -44,7 +44,7 @@ function SavingMessage() {
 }
 
 export type AnnotationProps = {
-  annotation: IAnnotation;
+  annotation: Annotation;
   isReply: boolean;
   /** Number of replies to this annotation's thread */
   replyCount: number;
@@ -77,7 +77,7 @@ function Annotation({
 
   const annotationQuote = quote(annotation);
   const draft = store.getDraft(annotation);
-  const userid = store.profile().userid;
+  const userid = store.getPublicKeyHex();
 
   const isHovered = store.isAnnotationHovered(annotation.$tag);
   const isSaving = store.isSavingAnnotation(annotation);
@@ -87,9 +87,6 @@ function Annotation({
 
   const showActions = !isSaving && !isEditing && isSaved(annotation);
 
-  const defaultAuthority = store.defaultAuthority();
-  const displayNamesEnabled = store.isFeatureEnabled('client_display_names');
-
   const onReply = () => {
     if (isSaved(annotation) && userid) {
       annotationsService.reply(annotation, userid);
@@ -98,8 +95,8 @@ function Annotation({
 
   const authorName = useMemo(
     () =>
-      annotationDisplayName(annotation, defaultAuthority, displayNamesEnabled),
-    [annotation, defaultAuthority, displayNamesEnabled],
+      annotationNostrDisplayName(annotation),
+    [annotation],
   );
 
   const annotationDescription = isSaved(annotation)

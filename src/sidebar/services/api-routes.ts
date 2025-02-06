@@ -1,41 +1,14 @@
 import type {
-  IndexResponse,
   LinksResponse,
   RouteMap,
-  RouteMetadata,
 } from '../../types/api';
-import type { SidebarSettings } from '../../types/config';
-import { fetchJSON } from '../util/fetch';
-import { retryPromiseOperation } from '../util/retry';
-
-/**
- * Fetch an API metadata file, retrying the operation if it fails.
- */
-function getJSON<T>(url: string): Promise<T> {
-  return retryPromiseOperation(
-    () =>
-      // nb. The `/api/` and `/api/links` routes are fetched without specifying
-      // any additional headers/config so that we can use `<link rel="preload">` in
-      // the `/app.html` response to fetch them early, while the client JS app
-      // is loading.
-      fetchJSON(url) as Promise<T>,
-  );
-}
 
 /**
  * A service which fetches and caches API route metadata.
  */
 // @inject
 export class APIRoutesService {
-  private _apiURL: string;
-  private _routeCache: Promise<RouteMap> | null;
-  private _linkCache: Promise<LinksResponse> | null;
-
-  constructor(settings: SidebarSettings) {
-    this._apiURL = settings.apiUrl;
-    this._routeCache = null;
-    this._linkCache = null;
-  }
+  constructor() {}
 
   /**
    * Fetch and cache API route metadata.
@@ -45,25 +18,195 @@ export class APIRoutesService {
    *
    * @return Map of routes to route metadata.
    */
-  routes(): Promise<RouteMap> {
-    if (!this._routeCache) {
-      this._routeCache = getJSON<IndexResponse>(this._apiURL).then(
-        result => result.links,
-      );
-    }
-    return this._routeCache;
+  async routes(): Promise<RouteMap> {
+    return {
+      "analytics": {
+        "events": {
+          "create": {
+            "method": "POST",
+            "url": "https://hypothes.is/api/analytics/events",
+            "desc": "Create a new analytics event"
+          }
+        }
+      },
+      "annotation": {
+        "create": {
+          "method": "POST",
+          "url": "https://hypothes.is/api/annotations",
+          "desc": "Create an annotation"
+        },
+        "delete": {
+          "method": "DELETE",
+          "url": "https://hypothes.is/api/annotations/:id",
+          "desc": "Delete an annotation"
+        },
+        "read": {
+          "method": "GET",
+          "url": "https://hypothes.is/api/annotations/:id",
+          "desc": "Fetch an annotation"
+        },
+        "update": {
+          "method": "PATCH",
+          "url": "https://hypothes.is/api/annotations/:id",
+          "desc": "Update an annotation"
+        },
+        "flag": {
+          "method": "PUT",
+          "url": "https://hypothes.is/api/annotations/:id/flag",
+          "desc": "Flag an annotation for review"
+        },
+        "hide": {
+          "method": "PUT",
+          "url": "https://hypothes.is/api/annotations/:id/hide",
+          "desc": "Hide an annotation as a group moderator"
+        },
+        "unhide": {
+          "method": "DELETE",
+          "url": "https://hypothes.is/api/annotations/:id/hide",
+          "desc": "Unhide an annotation as a group moderator"
+        }
+      },
+      "search": {
+        "method": "GET",
+        "url": "https://hypothes.is/api/search",
+        "desc": "Search for annotations"
+      },
+      "bulk": {
+        "action": {
+          "method": "POST",
+          "url": "https://hypothes.is/api/bulk",
+          "desc": "Perform multiple operations in one call"
+        },
+        "annotation": {
+          "method": "POST",
+          "url": "https://hypothes.is/api/bulk/annotation",
+          "desc": "Retrieve a large number of annotations in one go"
+        },
+        "group": {
+          "method": "POST",
+          "url": "https://hypothes.is/api/bulk/group",
+          "desc": "Retrieve a large number of groups in one go"
+        },
+        "lms": {
+          "annotations": {
+            "method": "POST",
+            "url": "https://hypothes.is/api/bulk/lms/annotations",
+            "desc": "Retrieve annotations for LMS metrics"
+          }
+        }
+      },
+      "group": {
+        "member": {
+          "add": {
+            "method": "POST",
+            "url": "https://hypothes.is/api/groups/:pubid/members/:userid",
+            "desc": "Add a user to a group"
+          },
+          "edit": {
+            "method": "PATCH",
+            "url": "https://hypothes.is/api/groups/:pubid/members/:userid",
+            "desc": "Change a user's role in a group"
+          },
+          "read": {
+            "method": "GET",
+            "url": "https://hypothes.is/api/groups/:pubid/members/:userid",
+            "desc": "Fetch a group membership"
+          },
+          "delete": {
+            "method": "DELETE",
+            "url": "https://hypothes.is/api/groups/:pubid/members/:userid",
+            "desc": "Remove a user from a group"
+          }
+        },
+        "members": {
+          "read": {
+            "method": "GET",
+            "url": "https://hypothes.is/api/groups/:pubid/members",
+            "desc": "Fetch a list of all members of a group"
+          }
+        },
+        "create": {
+          "method": "POST",
+          "url": "https://hypothes.is/api/groups",
+          "desc": "Create a new group"
+        },
+        "read": {
+          "method": "GET",
+          "url": "https://hypothes.is/api/groups/:id",
+          "desc": "Fetch a group"
+        },
+        "update": {
+          "method": "PATCH",
+          "url": "https://hypothes.is/api/groups/:id",
+          "desc": "Update a group"
+        }
+      },
+      "groups": {
+        "read": {
+          "method": "GET",
+          "url": "https://hypothes.is/api/groups",
+          "desc": "Fetch the user's groups"
+        }
+      },
+      "links": {
+        "method": "GET",
+        "url": "https://hypothes.is/api/links",
+        "desc": "URL templates for generating URLs for HTML pages"
+      },
+      "profile": {
+        "read": {
+          "method": "GET",
+          "url": "https://hypothes.is/api/profile",
+          "desc": "Fetch the user's profile"
+        },
+        "groups": {
+          "read": {
+            "method": "GET",
+            "url": "https://hypothes.is/api/profile/groups",
+            "desc": "Fetch the current user's groups"
+          }
+        },
+        "update": {
+          "method": "PATCH",
+          "url": "https://hypothes.is/api/profile",
+          "desc": "Update a user's preferences"
+        }
+      },
+      "user": {
+        "create": {
+          "method": "POST",
+          "url": "https://hypothes.is/api/users",
+          "desc": "Create a new user"
+        },
+        "read": {
+          "method": "GET",
+          "url": "https://hypothes.is/api/users/:userid",
+          "desc": "Fetch a user"
+        },
+        "update": {
+          "method": "PATCH",
+          "url": "https://hypothes.is/api/users/:username",
+          "desc": "Update a user"
+        }
+      }
+    };
   }
 
   /**
    * Fetch and cache service page links from the API.
    */
-  links(): Promise<LinksResponse> {
-    if (!this._linkCache) {
-      this._linkCache = this.routes().then(async routes => {
-        const linksRoute = routes.links as RouteMetadata;
-        return getJSON<LinksResponse>(linksRoute.url);
-      });
-    }
-    return this._linkCache;
+  async links(): Promise<LinksResponse> {
+    return {
+      "account.settings": "https://hypothes.is/account/settings",
+      "forgot-password": "https://hypothes.is/forgot-password",
+      "groups.new": "https://hypothes.is/groups/new",
+      "help": "https://hypothes.is/docs/help",
+      "oauth.authorize": "https://hypothes.is/oauth/authorize",
+      "oauth.revoke": "https://hypothes.is/oauth/revoke",
+      "search.tag": "https://hypothes.is/search?q=tag%3A%22:tag%22",
+      "signup": "https://hypothes.is/signup",
+      "user": "https://hypothes.is/u/:user",
+      "websocket": "wss://h-websocket.hypothes.is/ws"
+    };
   }
 }

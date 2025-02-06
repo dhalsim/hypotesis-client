@@ -42,14 +42,20 @@ const initialState: State = {
 };
 
 const reducers = {
-  API_REQUEST_STARTED(state: State) {
+  API_REQUEST_STARTED(state: State, action: { serviceName: string }) {
+    // eslint-disable-next-line no-console
+    console.log('API_REQUEST_STARTED', action.serviceName);
+
     return {
       ...state,
       activeApiRequests: state.activeApiRequests + 1,
     };
   },
 
-  API_REQUEST_FINISHED(state: State) {
+  API_REQUEST_FINISHED(state: State, action: { serviceName: string }) {
+    // eslint-disable-next-line no-console
+    console.log('API_REQUEST_FINISHED', action.serviceName);
+    
     if (state.activeApiRequests === 0) {
       throw new Error(
         'API_REQUEST_FINISHED action when no requests were active',
@@ -152,12 +158,12 @@ function annotationSaveFinished(annotation: Annotation) {
   return makeAction(reducers, 'ANNOTATION_SAVE_FINISHED', { annotation });
 }
 
-function apiRequestStarted() {
-  return makeAction(reducers, 'API_REQUEST_STARTED', undefined);
+function apiRequestStarted(serviceName: string) {
+  return makeAction(reducers, 'API_REQUEST_STARTED', { serviceName });
 }
 
-function apiRequestFinished() {
-  return makeAction(reducers, 'API_REQUEST_FINISHED', undefined);
+function apiRequestFinished(serviceName: string) {
+  return makeAction(reducers, 'API_REQUEST_FINISHED', { serviceName });
 }
 
 function setAnnotationResultCount(resultCount: number) {

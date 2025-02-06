@@ -55,6 +55,9 @@ export type ConfigFromSidebar = {
   oauthClientId: string;
   rpcAllowedOrigins: string[];
   sentry?: SentryConfig;
+  nostrProfileUrl?: string;
+  nostrEventUrl?: string;
+  nostrSearchUrl?: string;
 };
 
 /**
@@ -188,6 +191,15 @@ export type ConfigFromHost = {
 
   /** URL template for username links. */
   usernameUrl?: string;
+
+  /** URL for the nostr profile page. */
+  nostrProfileUrl?: string;
+
+  /** URL for the nostr event page. */
+  nostrEventUrl?: string;
+
+  /** URL template for nostr search. */
+  nostrSearchUrl?: string;
 };
 
 /**

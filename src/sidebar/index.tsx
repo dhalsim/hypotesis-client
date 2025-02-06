@@ -40,6 +40,12 @@ import { StreamerService } from './services/streamer';
 import { TagsService } from './services/tags';
 import { ThreadsService } from './services/threads';
 import { ToastMessengerService } from './services/toast-messenger';
+import { NostrHighlightAdapterService } from './services/nostr-highlight-adapter';
+import { NostrFetchHighlightsService } from './services/nostr-fetch-highlights';
+import { NostrProfileService } from './services/nostr-profile';
+import { NostrRelaysService } from './services/nostr-relays';
+import { NostrSettingsService } from './services/nostr-settings';
+import { NostrPublisherService } from './services/nostr-publisher';
 import { createSidebarStore } from './store';
 import type { SidebarStore } from './store';
 import { disableOpenerForExternalLinks } from './util/disable-opener-for-external-links';
@@ -52,6 +58,7 @@ const configFromSidebar = parseJsonConfig(document) as ConfigFromSidebar;
 //
 // If any checks fail we'll log warnings and disable error reporting, but try
 // and continue anyway.
+// TODO: nostr: remove sentry
 const envOk = checkEnvironment(window);
 
 if (configFromSidebar.sentry && envOk) {
@@ -156,6 +163,12 @@ function startApp(settings: SidebarSettings, appEl: HTMLElement) {
     .register('loadAnnotationsService', LoadAnnotationsService)
     .register('localStorage', LocalStorageService)
     .register('persistedDefaults', PersistedDefaultsService)
+    .register('nostrRelaysService', NostrRelaysService)
+    .register('nostrProfileService', NostrProfileService)
+    .register('nostrSettingsService', NostrSettingsService)
+    .register('nostrFetchHighlightsService', NostrFetchHighlightsService)
+    .register('nostrPublisherService', NostrPublisherService)
+    .register('nostrHighlightAdapterService', NostrHighlightAdapterService)
     .register('router', RouterService)
     .register('serviceURL', ServiceURLService)
     .register('session', SessionService)
@@ -182,6 +195,7 @@ function startApp(settings: SidebarSettings, appEl: HTMLElement) {
   container.run(syncRoute);
   container.run(initServices);
   container.run(setupApi);
+  // TODO: nostr: remove this once Nostr is fully implemented
   container.run(loadGroupsAndProfile);
   container.run(startRPCServer);
   container.run(setupFrameSync);

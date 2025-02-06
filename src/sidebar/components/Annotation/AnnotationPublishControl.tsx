@@ -1,19 +1,10 @@
-import {
-  Button,
-  CancelIcon,
-  GlobeIcon,
-  GroupsIcon,
-  LockIcon,
-  MenuExpandIcon,
-} from '@hypothesis/frontend-shared';
+import { Button, CancelIcon } from '@hypothesis/frontend-shared';
 import classnames from 'classnames';
 
 import type { Group } from '../../../types/api';
 import type { SidebarSettings } from '../../../types/config';
 import { applyTheme } from '../../helpers/theme';
 import { withServices } from '../../service-context';
-import Menu from '../Menu';
-import MenuItem from '../MenuItem';
 
 export type AnnotationPublishControlProps = {
   /** The group this annotation or draft would publish to */
@@ -25,17 +16,11 @@ export type AnnotationPublishControlProps = {
    */
   isDisabled?: boolean;
 
-  /** Annotation or draft is "Only Me" */
-  isPrivate: boolean;
-
   /** Callback for cancel button click */
   onCancel: () => void;
 
   /** Callback for save button click */
   onSave: () => void;
-
-  /** Callback when privacy level is changed (publish to group vs. Only me) */
-  onSetPrivate: (isPrivate: boolean) => void;
 
   // Injected
   settings: SidebarSettings;
@@ -51,10 +36,8 @@ export type AnnotationPublishControlProps = {
 function AnnotationPublishControl({
   group,
   isDisabled,
-  isPrivate,
   onCancel,
   onSave,
-  onSetPrivate,
   settings,
 }: AnnotationPublishControlProps) {
   const buttonStyle = applyTheme(
@@ -62,23 +45,11 @@ function AnnotationPublishControl({
     settings,
   );
 
-  const menuLabel = (
-    <div
-      className="w-9 h-9 flex items-center justify-center text-color-text-inverted"
-      style={buttonStyle}
-    >
-      <MenuExpandIcon className="w-4 h-4" />
-    </div>
-  );
-
   return (
     <div className="flex flex-row gap-x-3">
       <div className="flex relative">
         <Button
-          classes={classnames(
-            // Turn off right-side border radius to align with menu-open button
-            'rounded-r-none',
-          )}
+          classes={classnames('rounded')}
           data-testid="publish-control-button"
           style={buttonStyle}
           onClick={onSave}
@@ -86,43 +57,8 @@ function AnnotationPublishControl({
           size="lg"
           variant="primary"
         >
-          Post to {isPrivate ? 'Only Me' : group.name}
+          Post to {group.name}
         </Button>
-        {/* This wrapper div is necessary because of peculiarities with
-             Safari: see https://github.com/hypothesis/client/issues/2302 */}
-        <div
-          className={classnames(
-            // Round the right side of this menu-open button only
-            'flex flex-row rounded-r bg-grey-7 hover:bg-grey-8',
-          )}
-          style={buttonStyle}
-        >
-          <Menu
-            containerPositioned={false}
-            contentClass={classnames(
-              // Ensure the menu is wide enough to "reach" the right-aligned
-              // up-pointing menu arrow
-              'min-w-full',
-            )}
-            label={menuLabel}
-            menuIndicator={false}
-            title="Change annotation sharing setting"
-            align="left"
-          >
-            <MenuItem
-              icon={group.type === 'open' ? GlobeIcon : GroupsIcon}
-              label={group.name}
-              isSelected={!isPrivate}
-              onClick={() => onSetPrivate(false)}
-            />
-            <MenuItem
-              icon={LockIcon}
-              label="Only Me"
-              isSelected={isPrivate}
-              onClick={() => onSetPrivate(true)}
-            />
-          </Menu>
-        </div>
       </div>
       <div>
         <Button data-testid="cancel-button" onClick={onCancel} size="lg">
