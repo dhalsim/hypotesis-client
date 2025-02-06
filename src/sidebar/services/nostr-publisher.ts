@@ -159,7 +159,7 @@ export class NostrPublisherService {
           relays: relays.map(r => r.url)
         })
       },
-      // TODO: check Reports
+      // TODO: nostr: check Reports
       flagged: false,
       user: finalizedEvent.pubkey,
       user_info: {

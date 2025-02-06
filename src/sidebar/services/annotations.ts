@@ -130,8 +130,6 @@ export class AnnotationsService {
    * Create a draft for it unless it's a highlight and clear other empty
    * drafts out of the way.
    */
-  // TODO: type is not correct, this is coming from the frame-sync, which doesn't have
-  // nostr_event or id
   create(
     annotationData: Omit<AnnotationData, '$tag' | 'id' | 'nostr_event'>, 
     now = new Date()

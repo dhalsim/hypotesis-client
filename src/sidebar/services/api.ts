@@ -244,6 +244,8 @@ export class APIService {
     this._clientId = null;
 
     const links = apiRoutes.routes();
+    
+    // TODO: nostr: remove this
     const getClientId = () => this._clientId;
     const apiCall = (route: string) =>
       createAPICall(links, route, {

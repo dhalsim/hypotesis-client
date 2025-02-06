@@ -58,6 +58,7 @@ const configFromSidebar = parseJsonConfig(document) as ConfigFromSidebar;
 //
 // If any checks fail we'll log warnings and disable error reporting, but try
 // and continue anyway.
+// TODO: nostr: remove sentry
 const envOk = checkEnvironment(window);
 
 if (configFromSidebar.sentry && envOk) {
@@ -194,7 +195,7 @@ function startApp(settings: SidebarSettings, appEl: HTMLElement) {
   container.run(syncRoute);
   container.run(initServices);
   container.run(setupApi);
-  // TODO: remove this once Nostr is fully implemented
+  // TODO: nostr: remove this once Nostr is fully implemented
   container.run(loadGroupsAndProfile);
   container.run(startRPCServer);
   container.run(setupFrameSync);

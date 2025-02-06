@@ -70,7 +70,7 @@ function HypothesisApp({
 
   const isThirdParty = isThirdPartyService(settings);
 
-  // TODO: remove this once Nostr is fully implemented
+  // TODO: nostr: remove this once Nostr is fully implemented
   const login = async () => {
     if (serviceConfig(settings)) {
       // Let the host page handle the login request
@@ -89,7 +89,7 @@ function HypothesisApp({
     }
   };
 
-  // TODO: remove this once Nostr is fully implemented
+  // TODO: nostr: remove this once Nostr is fully implemented
   const signUp = () => {
     if (serviceConfig(settings)) {
       // Let the host page handle the signup request

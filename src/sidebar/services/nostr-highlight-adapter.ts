@@ -234,7 +234,7 @@ export class NostrHighlightAdapterService {
       links: {
         html: nostrEventUrl({ settings: this._settings, store: this._store, event, relays })
       },
-      // TODO: check Reports
+      // TODO: nostr: check Reports
       flagged: false,
       user: event.pubkey,
       user_info: {
@@ -355,7 +355,7 @@ export class NostrHighlightAdapterService {
       links: {
         html: nostrEventUrl({ settings: this._settings, store: this._store, event: threadEvent, relays })
       },
-      // TODO: check Reports
+      // TODO: nostr: check Reports
       flagged: false,
       user: threadEvent.pubkey,
       user_info: {

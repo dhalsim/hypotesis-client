@@ -89,7 +89,6 @@ function Annotation({
 
   const onReply = () => {
     if (isSaved(annotation) && userid) {
-      // TODO: nostrize
       annotationsService.reply(annotation, userid);
     }
   };

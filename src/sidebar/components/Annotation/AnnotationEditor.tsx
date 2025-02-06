@@ -165,7 +165,7 @@ function AnnotationEditor({
       className="space-y-4"
       onKeyDown={onKeyDown}
     >
-      {/* TODO: remove markdown editor or use textarea instead */}
+      {/* TODO: nostr: remove markdown editor for annotations and or use textarea for replies */}
       <MarkdownEditor
         textStyle={textStyle}
         label={isReplyAnno ? 'Enter reply' : 'Enter comment'}
