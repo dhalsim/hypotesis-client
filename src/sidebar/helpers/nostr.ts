@@ -55,8 +55,8 @@ export function nostrSearchUrl({ settings, store, searchTerm, tag }: NostrSearch
 
 export async function retryWithBackoff<T>(
   operation: (retryCount: number) => Promise<T>,
-  maxRetries: number = 3,
-  initialDelay: number = 100
+  maxRetries: number = 5,
+  initialDelay: number = 200
 ): Promise<T> {
   let retryCount = 0;
   

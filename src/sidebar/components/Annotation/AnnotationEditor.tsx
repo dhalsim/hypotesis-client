@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from 'preact/hooks';
+import classnames from 'classnames';
+import { useCallback, useMemo, useRef, useState } from 'preact/hooks';
 import type { Annotation } from '../../../types/api';
 
 import type { SidebarSettings } from '../../../types/config';
@@ -16,10 +17,10 @@ import type { ToastMessengerService } from '../../services/toast-messenger';
 import type { AnnotationsService } from '../../services/annotations';
 import type { Draft } from '../../store/modules/drafts';
 
-import MarkdownEditor from '../MarkdownEditor';
 import TagEditor from '../TagEditor';
 import AnnotationLicense from './AnnotationLicense';
 import AnnotationPublishControl from './AnnotationPublishControl';
+import TextArea from '../TextAreaEditor';
 
 type AnnotationEditorProps = {
   /** The annotation under edit */
@@ -155,8 +156,9 @@ function AnnotationEditor({
 
   const textStyle = applyTheme(['annotationFontFamily'], settings);
 
-  const mentionsEnabled = store.isFeatureEnabled('at_mentions');
-  const usersWhoAnnotated = store.usersWhoAnnotated();
+  const label = 'Enter reply';
+  // The input element where the user inputs their comment.
+  const input = useRef<HTMLTextAreaElement>(null);
 
   return (
     /* eslint-disable-next-line jsx-a11y/no-static-element-interactions */
@@ -165,15 +167,25 @@ function AnnotationEditor({
       className="space-y-4"
       onKeyDown={onKeyDown}
     >
-      {/* TODO: nostr: remove markdown editor for annotations and or use textarea for replies */}
-      <MarkdownEditor
-        textStyle={textStyle}
-        label={isReplyAnno ? 'Enter reply' : 'Enter comment'}
-        text={text}
-        onEditText={onEditText}
-        mentionsEnabled={mentionsEnabled}
-        usersForMentions={usersWhoAnnotated}
-      />
+      {isReplyAnno && (
+        <TextArea
+          aria-label={label}
+          placeholder={label}
+          dir="auto"
+          classes={classnames(
+            'w-full min-h-[8em] resize-y',
+            // Turn off border-radius on top edges to align with toolbar above
+            'rounded-t-none',
+            // Larger font on touch devices
+            'text-base touch:text-touch-base',
+          )}
+          containerRef={input}
+          onKeyDown={onKeyDown}
+          onEditText={onEditText}
+          value={text}
+          style={textStyle}
+        />
+      )}
       <TagEditor
         onAddTag={onAddTag}
         onRemoveTag={onRemoveTag}

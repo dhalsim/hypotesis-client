@@ -4,7 +4,6 @@ import { useEffect, useRef } from 'preact/hooks';
 import { tabForAnnotation } from '../helpers/tabs';
 import { withServices } from '../service-context';
 import type { FrameSyncService } from '../services/frame-sync';
-import type { StreamerService } from '../services/streamer';
 import type { NostrFetchHighlightsService } from '../services/nostr-fetch-highlights';
 
 import { useSidebarStore } from '../store';
@@ -21,7 +20,6 @@ export type SidebarViewProps = {
 
   // injected
   frameSync: FrameSyncService;
-  streamer: StreamerService;
   nostrFetchHighlightsService: NostrFetchHighlightsService;
 };
 
@@ -32,7 +30,6 @@ function SidebarView({
   frameSync,
   onLogin,
   onSignUp,
-  streamer,
   nostrFetchHighlightsService
 }: SidebarViewProps) {
   // Store state values
@@ -50,7 +47,6 @@ function SidebarView({
     : 'annotation';
 
   const searchUris = store.searchUris();
-  const sidebarHasOpened = store.hasSidebarOpened();
   const userId = store.profile().userid;
 
   // If, after loading completes, no `linkedAnnotation` object is present when
@@ -99,6 +95,7 @@ function SidebarView({
       }
       prevGroupId.current = focusedGroupId;
     }
+    
     if (focusedGroupId && searchUris.length) {
       nostrFetchHighlightsService.loadByUri({
         uri: searchUris[0],
@@ -122,15 +119,7 @@ function SidebarView({
       store.selectTab(directLinkedTab);
     }
   }, [directLinkedTab, frameSync, linkedAnnotation, store]);
-
-  // Connect to the streamer when the sidebar has opened or if user is logged in
-  const hasFetchedProfile = store.hasFetchedProfile();
-  useEffect(() => {
-    if (hasFetchedProfile && (sidebarHasOpened || isLoggedIn)) {
-      streamer.connect({ applyUpdatesImmediately: false });
-    }
-  }, [hasFetchedProfile, isLoggedIn, sidebarHasOpened, streamer]);
-
+  
   return (
     <div className="relative">
       <h2 className="sr-only">Annotations</h2>
@@ -168,5 +157,4 @@ function SidebarView({
 export default withServices(SidebarView, [
   'frameSync',
   'nostrFetchHighlightsService',
-  'streamer',
 ]);
