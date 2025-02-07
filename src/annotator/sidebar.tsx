@@ -413,11 +413,6 @@ export class Sidebar implements Destroyable {
     annotationCounts(document.body, this._sidebarRPC);
     sidebarTrigger(document.body, () => this.open());
 
-    this._sidebarRPC.on(
-      'featureFlagsUpdated',
-      (flags: Record<string, boolean>) => this.features.update(flags),
-    );
-
     this._sidebarRPC.on('connect', () => {
       // Show the UI
       if (this.iframeContainer) {

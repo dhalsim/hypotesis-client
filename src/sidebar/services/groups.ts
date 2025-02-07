@@ -1,17 +1,14 @@
+// TODO: nostr: review for nostr
 import shallowEqual from 'shallowequal';
 
 // @ts-ignore - TS doesn't know about SVG files.
 import { default as logo } from '../../images/icons/logo.svg';
 import type { Group } from '../../types/api';
-import type { SidebarSettings } from '../../types/config';
-import type { Service } from '../../types/config';
-import { serviceConfig } from '../config/service-config';
 import { isReply } from '../helpers/annotation-metadata';
 import { PUBLIC_GROUP_ID } from '../helpers/groups';
 import type { SidebarStore } from '../store';
 import { watch } from '../util/watch';
 import type { APIService } from './api';
-import type { ToastMessengerService } from './toast-messenger';
 
 const DEFAULT_ORG_ID = '__default__';
 
@@ -46,21 +43,14 @@ function injectOrganizations(groups: Group[]) {
 export class GroupsService {
   private _store: SidebarStore;
   private _api: APIService;
-  private _toastMessenger: ToastMessengerService;
-  private _serviceConfig: Service | null;
   private _reloadSetUp: boolean;
 
   constructor(
     store: SidebarStore,
-    api: APIService,
-    settings: SidebarSettings,
-    toastMessenger: ToastMessengerService,
+    api: APIService
   ) {
     this._store = store;
     this._api = api;
-    this._toastMessenger = toastMessenger;
-
-    this._serviceConfig = serviceConfig(settings);
     this._reloadSetUp = false;
   }
 

@@ -116,9 +116,6 @@ export type SidebarToGuestEvent =
   /** Remove an annotation from the guest frame. */
   | 'deleteAnnotation'
 
-  /** The active feature flags changed. */
-  | 'featureFlagsUpdated'
-
   /**
    * Indicate in the guest which highlights correspond to hovered annotations
    * in the sidebar.
@@ -155,9 +152,6 @@ export type SidebarToHostEvent =
    * container in the host frame.
    */
   | 'closeSidebar'
-
-  /** The active feature flags changed. */
-  | 'featureFlagsUpdated'
 
   /**
    * Open the partner site help page.

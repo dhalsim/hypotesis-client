@@ -18,7 +18,7 @@ function LoggedOutMessage({ onLogin }: LoggedOutMessageProps) {
     <div className="flex flex-col items-center m-6 space-y-6">
       <span className="text-center">
         This is a public annotation created with Hypothesis. <br />
-        To reply or make your own annotations on this document,{' '}
+        To reply or make your own annotations on this document please connect,{' '}
         <Link
           variant="text"
           href={store.getLink('signup')}

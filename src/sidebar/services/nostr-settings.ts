@@ -2,7 +2,7 @@ import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 import { getPublicKey } from 'nostr-tools';
 
 import type { SidebarStore } from '../store';
-import type { State as NostrSettingsState } from '../store/modules/nostr';
+import type { NostrState as NostrSettingsState } from '../store/modules/nostr';
 import type { LocalStorageService } from './local-storage';
 import type { NostrProfileService } from './nostr-profile';
 

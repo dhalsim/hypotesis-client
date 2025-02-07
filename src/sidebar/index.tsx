@@ -20,7 +20,6 @@ import { ServiceContext } from './service-context';
 import { AnalyticsService } from './services/analytics';
 import { AnnotationActivityService } from './services/annotation-activity';
 import { AnnotationsService } from './services/annotations';
-import { AnnotationsExporter } from './services/annotations-exporter';
 import { APIService } from './services/api';
 import { APIRoutesService } from './services/api-routes';
 import { AuthService } from './services/auth';
@@ -28,15 +27,11 @@ import { AutosaveService } from './services/autosave';
 import { DashboardService } from './services/dashboard';
 import { FrameSyncService } from './services/frame-sync';
 import { GroupsService } from './services/groups';
-import { ImportAnnotationsService } from './services/import-annotations';
-import { LoadAnnotationsService } from './services/load-annotations';
 import { LocalStorageService } from './services/local-storage';
 import { PersistedDefaultsService } from './services/persisted-defaults';
 import { RouterService } from './services/router';
 import { ServiceURLService } from './services/service-url';
-import { SessionService } from './services/session';
 import { StreamFilter } from './services/stream-filter';
-import { StreamerService } from './services/streamer';
 import { TagsService } from './services/tags';
 import { ThreadsService } from './services/threads';
 import { ToastMessengerService } from './services/toast-messenger';
@@ -71,15 +66,6 @@ if (configFromSidebar.sentry && envOk) {
 disableOpenerForExternalLinks(document.body);
 
 /**
- * Configure the Hypothesis API client.
- *
- * @inject
- */
-function setupApi(api: APIService, streamer: StreamerService) {
-  api.setClientId(streamer.clientId);
-}
-
-/**
  * Update the route in the store based on the initial URL.
  *
  * @inject
@@ -93,9 +79,8 @@ function syncRoute(router: RouterService) {
  *
  * @inject
  */
-function loadGroupsAndProfile(groups: GroupsService, session: SessionService) {
+function loadGroupsAndProfile(groups: GroupsService) {
   groups.load();
-  session.load();
 }
 
 /**
@@ -149,7 +134,6 @@ function startApp(settings: SidebarSettings, appEl: HTMLElement) {
   // Register services.
   container
     .register('analytics', AnalyticsService)
-    .register('annotationsExporter', AnnotationsExporter)
     .register('annotationsService', AnnotationsService)
     .register('annotationActivity', AnnotationActivityService)
     .register('api', APIService)
@@ -159,8 +143,6 @@ function startApp(settings: SidebarSettings, appEl: HTMLElement) {
     .register('dashboard', DashboardService)
     .register('frameSync', FrameSyncService)
     .register('groups', GroupsService)
-    .register('importAnnotationsService', ImportAnnotationsService)
-    .register('loadAnnotationsService', LoadAnnotationsService)
     .register('localStorage', LocalStorageService)
     .register('persistedDefaults', PersistedDefaultsService)
     .register('nostrRelaysService', NostrRelaysService)
@@ -171,9 +153,9 @@ function startApp(settings: SidebarSettings, appEl: HTMLElement) {
     .register('nostrHighlightAdapterService', NostrHighlightAdapterService)
     .register('router', RouterService)
     .register('serviceURL', ServiceURLService)
-    .register('session', SessionService)
-    .register('streamer', StreamerService)
+    // TODO: nostr: suspect this is not needed
     .register('streamFilter', StreamFilter)
+    
     .register('tags', TagsService)
     .register('threadsService', ThreadsService)
     .register('toastMessenger', ToastMessengerService)
@@ -194,9 +176,10 @@ function startApp(settings: SidebarSettings, appEl: HTMLElement) {
   // sidebar-only behavior).
   container.run(syncRoute);
   container.run(initServices);
-  container.run(setupApi);
+  
   // TODO: nostr: remove this once Nostr is fully implemented
   container.run(loadGroupsAndProfile);
+  
   container.run(startRPCServer);
   container.run(setupFrameSync);
 

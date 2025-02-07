@@ -6,21 +6,24 @@ import { bytesToHex } from '@noble/hashes/utils';
 import { useId, useState, useRef, useEffect } from 'preact/hooks';
 
 import { useSidebarStore } from '../store';
-import type { State as NostrSettingsState } from '../store/modules/nostr';
+import { withServices } from '../service-context';
+import type { NostrSettingsService } from '../services/nostr-settings';
+import type { NostrState } from '../store/modules/nostr';
+
 import SidebarPanel from './SidebarPanel';
 import TabHeader from './tabs/TabHeader';
 import TabPanel from './tabs/TabPanel';
 
 type NostrConnectPanelProps = {
   onClose: () => void;
-  onSavePrivateKey: (privateKey: Uint8Array) => void;
+  nostrSettingsService: NostrSettingsService;
 };
 
-type PanelKey = NostrSettingsState['connectMode'];
+type PanelKey = NostrState['connectMode'];
 
-export default function NostrConnectPanel({
-  onClose,
-  onSavePrivateKey,
+function NostrConnectPanel({
+  nostrSettingsService,
+  onClose
 }: NostrConnectPanelProps) {
   const store = useSidebarStore();
   const isOpen = store.isSidebarPanelOpen('nostrConnectPanel');
@@ -92,7 +95,7 @@ export default function NostrConnectPanel({
         return;
       }
 
-      onSavePrivateKey(privateKey);
+      nostrSettingsService.setPrivateKey(privateKey);
       onClose();
     } catch (err) {
       console.error('Failed to connect:', err);
@@ -109,7 +112,7 @@ export default function NostrConnectPanel({
       onActiveChanged={active => !active && onClose()}
       variant="custom"
     >
-      <TabHeader closeTitle="Close Nostr Connect panel">
+      <TabHeader closeTitle="Close Nostr Connect panel" onClose={onClose}>
         <Tab
           id={privateKeyTabId}
           aria-controls={privateKeyPanelId}
@@ -210,3 +213,5 @@ export default function NostrConnectPanel({
     </SidebarPanel>
   );
 }
+
+export default withServices(NostrConnectPanel, ['nostrSettingsService']);

@@ -11,8 +11,10 @@ import type { FocusUserInfo } from './rpc';
  */
 export type Service = {
   apiUrl: string;
+  // TODO: nostr: remove this once Nostr is fully implemented
   authority: string;
   grantToken: string;
+  
   icon?: string;
   /**
    * List of IDs of groups to show. If the embedder specifies "$rpc:requestGroups",

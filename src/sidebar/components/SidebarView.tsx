@@ -1,4 +1,3 @@
-import classnames from 'classnames';
 import { useEffect, useRef } from 'preact/hooks';
 
 import { tabForAnnotation } from '../helpers/tabs';
@@ -8,15 +7,12 @@ import type { NostrFetchHighlightsService } from '../services/nostr-fetch-highli
 
 import { useSidebarStore } from '../store';
 import LoggedOutMessage from './LoggedOutMessage';
-import LoginPromptPanel from './LoginPromptPanel';
-import PendingUpdatesNotification from './PendingUpdatesNotification';
 import SidebarContentError from './SidebarContentError';
 import SidebarTabs from './SidebarTabs';
 import FilterControls from './search/FilterControls';
 
 export type SidebarViewProps = {
   onLogin: () => void;
-  onSignUp: () => void;
 
   // injected
   frameSync: FrameSyncService;
@@ -29,25 +25,26 @@ export type SidebarViewProps = {
 function SidebarView({
   frameSync,
   onLogin,
-  onSignUp,
   nostrFetchHighlightsService
 }: SidebarViewProps) {
   // Store state values
   const store = useSidebarStore();
   const focusedGroupId = store.focusedGroupId();
   const isLoading = store.isLoading();
-  const isLoggedIn = store.isLoggedIn();
+  const isLoggedIn = store.isNostrLoggedIn();
 
   const linkedAnnotationId = store.directLinkedAnnotationId();
+  
   const linkedAnnotation = linkedAnnotationId
     ? store.findAnnotationByID(linkedAnnotationId)
     : undefined;
-  const directLinkedTab = linkedAnnotation
+  
+    const directLinkedTab = linkedAnnotation
     ? tabForAnnotation(linkedAnnotation)
     : 'annotation';
 
   const searchUris = store.searchUris();
-  const userId = store.profile().userid;
+  const userId = store.getNostrProfile()?.publicKeyHex;
 
   // If, after loading completes, no `linkedAnnotation` object is present when
   // a `linkedAnnotationId` is set, that indicates an error
@@ -123,21 +120,9 @@ function SidebarView({
   return (
     <div className="relative">
       <h2 className="sr-only">Annotations</h2>
-      <div
-        className={classnames(
-          // z-10 ensures this appears over sidebar panels, which use the same
-          // z-index but render lower in the DOM
-          'fixed z-10',
-          // Setting 9px to the right instead of some standard tailwind size,
-          // so that it matches the padding of the sidebar's container.
-          // DEFAULT `.container` padding is defined in tailwind.conf.js
-          'right-[9px] top-12',
-        )}
-      >
-        <PendingUpdatesNotification />
-      </div>
       {showFilterControls && <FilterControls withCardContainer />}
-      <LoginPromptPanel onLogin={onLogin} onSignUp={onSignUp} />
+      {/* TODO: nostr: we can use nip42 authentication: https://nips.nostr.com/42
+      // LoginPromptPanel */}
       {hasDirectLinkedAnnotationError && (
         <SidebarContentError
           errorType="annotation"
