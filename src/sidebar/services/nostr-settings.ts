@@ -82,6 +82,7 @@ export class NostrSettingsService {
       nostrProfileUrl: this._store.getNostrProfileUrl(),
       nostrSearchUrl: this._store.getNostrSearchUrl(),
       nostrEventUrl: this._store.getNostrEventUrl(),
+      openHelpPanel: this._store.getOpenHelpPanel(),
     };
 
     try {

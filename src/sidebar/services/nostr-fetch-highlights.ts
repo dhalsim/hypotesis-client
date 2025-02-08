@@ -1,4 +1,4 @@
-import { SimplePool, kinds } from 'nostr-tools';
+import { kinds } from 'nostr-tools';
 import type { SubCloser } from 'nostr-tools/lib/types/abstract-pool';
 
 import type { SidebarStore } from '../store';
@@ -55,7 +55,7 @@ export class NostrFetchHighlightsService {
 
     const adapter = this._nostrHighlightAdapterService;
     const relays = this._nostrRelaysService.getReadRelays();
-    const pool = new SimplePool();
+    const pool = this._nostrRelaysService.getPool();
     const threadLoader = this.loadThread.bind(this);
 
     pool.trackRelays = true;
@@ -104,7 +104,7 @@ export class NostrFetchHighlightsService {
     const store = this._store;
     const adapter = this._nostrHighlightAdapterService;
     const relays = this._nostrRelaysService.getReadRelays();
-    const pool = new SimplePool();
+    const pool = this._nostrRelaysService.getPool();
 
     store.annotationFetchStarted();
 
@@ -141,6 +141,7 @@ export class NostrFetchHighlightsService {
     );
   }
 
+  // TODO: nostr: is there any need to close the subscription?
   close(): boolean {
     if (this._subCloser) {
       this._subCloser.close();

@@ -1,4 +1,4 @@
-import { finalizeEvent, SimplePool, type VerifiedEvent } from 'nostr-tools';
+import { finalizeEvent, type VerifiedEvent } from 'nostr-tools';
 
 import type { Annotation, SavedAnnotation } from "../../types/api";
 import type { SidebarStore } from '../store';
@@ -60,7 +60,7 @@ export class NostrPublisherService {
     const event = await this._nostrHighlightAdapterService.convertToEvent(annotation);
     
     const relays = this._nostrRelaysService.getWriteRelays();
-    const pool = new SimplePool();
+    const pool = this._nostrRelaysService.getPool();
 
     const connectMode = this._store.getConnectMode();
 
@@ -106,7 +106,7 @@ export class NostrPublisherService {
     });
 
     const relays = this._nostrRelaysService.getWriteRelays();
-    const pool = new SimplePool();
+    const pool = this._nostrRelaysService.getPool();
 
     const connectMode = this._store.getConnectMode();
 

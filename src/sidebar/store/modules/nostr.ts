@@ -89,7 +89,7 @@ function setConnectMode(connectMode: 'nsec' | 'bunker' | 'nostr-connect') {
   return makeAction(reducers, 'SET_CONNECT_MODE', { connectMode });
 }
 
-function setProfile(profile: NostrProfile | null) {
+function setNostrProfile(profile: NostrProfile | null) {
   return makeAction(reducers, 'SET_PROFILE', { profile });
 }
 
@@ -148,7 +148,7 @@ export const nostrModule = createStoreModule(initialState, {
     setPrivateKey,
     setPublicKeyHex,
     setConnectMode,
-    setProfile,
+    setNostrProfile,
     setProfileLoading,
     setOpenHelpPanel,
   },

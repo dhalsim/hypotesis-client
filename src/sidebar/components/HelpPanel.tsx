@@ -106,7 +106,9 @@ export default function HelpPanel() {
       onActiveChanged={onActiveChanged}
       variant="custom"
     >
-      <TabHeader closeTitle="Close help panel" onClose={() => { store.setOpenHelpPanel(false); }}>
+      <TabHeader closeTitle="Close help panel" onClose={
+        () => { store.toggleSidebarPanel('help'); }
+      }>
         <Tab
           id={tutorialTabId}
           aria-controls={tutorialPanelId}
