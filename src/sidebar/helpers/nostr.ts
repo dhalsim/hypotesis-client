@@ -79,3 +79,21 @@ export async function retryWithBackoff<T>(
 
   throw new Error('Max retries reached');
 }
+
+export function nostrDisplayName(
+  pubkeyHex: string,
+  displayName?: string | null,
+  shorten: boolean = true
+): string {
+  if (displayName) {
+    return displayName;
+  }
+
+  const npub = nip19.npubEncode(pubkeyHex);
+
+  if (shorten) {
+    return npub.slice(0, 5) + ':' + npub.slice(-5);
+  }
+
+  return npub;
+}

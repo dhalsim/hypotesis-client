@@ -1,37 +1,17 @@
 import {
-  confirm,
   IconButton,
-  EditIcon,
   FlagIcon,
   FlagFilledIcon,
   ReplyIcon,
-  TrashIcon,
 } from '@hypothesis/frontend-shared';
 
 import type { SavedAnnotation } from '../../../types/api';
-import type { SidebarSettings } from '../../../types/config';
-import { serviceConfig } from '../../config/service-config';
-import { annotationRole } from '../../helpers/annotation-metadata';
-import {
-  sharingEnabled,
-  annotationSharingLink,
-} from '../../helpers/annotation-sharing';
-import { isPrivate, permits } from '../../helpers/permissions';
+import { annotationSharingLink } from '../../helpers/annotation-sharing';
 import { withServices } from '../../service-context';
 import type { AnnotationsService } from '../../services/annotations';
 import type { ToastMessengerService } from '../../services/toast-messenger';
 import { useSidebarStore } from '../../store';
 import AnnotationShareControl from './AnnotationShareControl';
-
-function flaggingEnabled(settings: SidebarSettings) {
-  const service = serviceConfig(settings);
-  
-  if (service?.allowFlagging === false) {
-    return false;
-  }
-  
-  return true;
-}
 
 export type AnnotationActionBarProps = {
   annotation: SavedAnnotation;
@@ -39,7 +19,6 @@ export type AnnotationActionBarProps = {
 
   // injected
   annotationsService: AnnotationsService;
-  settings: SidebarSettings;
   toastMessenger: ToastMessengerService;
 };
 
@@ -53,61 +32,16 @@ function AnnotationActionBar({
   annotation,
   annotationsService,
   onReply,
-  settings,
   toastMessenger,
 }: AnnotationActionBarProps) {
   const store = useSidebarStore();
   const userProfile = store.getNostrProfile();
   const isLoggedIn = userProfile !== null;
 
-  // Is the current user allowed to take the given `action` on this annotation?
-  const userIsAuthorizedTo = (action: 'update' | 'delete') => {
-    return permits(
-      annotation.permissions,
-      action,
-      isLoggedIn 
-        ? userProfile.publicKeyHex 
-        : null,
-    );
-  };
-
-  const showDeleteAction = userIsAuthorizedTo('delete');
-  const showEditAction = userIsAuthorizedTo('update');
-
-  //  Only authenticated users can flag an annotation, except the annotation's author.
-  const showFlagAction =
-    flaggingEnabled(settings) &&
-    !!userProfile?.publicKeyHex &&
-    userProfile.publicKeyHex !== annotation.user;
-
-  const shareLink =
-    sharingEnabled(settings) && annotationSharingLink(annotation);
-
-  const onDelete = async () => {
-    const annType = annotationRole(annotation);
-    if (
-      await confirm({
-        title: `Delete ${annType.toLowerCase()}?`,
-        message: `Are you sure you want to delete this ${annType.toLowerCase()}?`,
-        confirmAction: 'Delete',
-      })
-    ) {
-      try {
-        await annotationsService.delete(annotation);
-        toastMessenger.success(`${annType} deleted`, { visuallyHidden: true });
-      } catch (err) {
-        toastMessenger.error(err.message);
-      }
-    }
-  };
-
-  const onEdit = () => {
-    store.createDraft(annotation, {
-      tags: annotation.tags,
-      text: annotation.text,
-      isPrivate: isPrivate(annotation.permissions),
-    });
-  };
+  const shareLink = annotationSharingLink(annotation);
+  const showFlagButton = !annotation.flagged 
+    && isLoggedIn 
+    && annotation.user !== userProfile?.publicKeyHex;
 
   const onFlag = () => {
     annotationsService
@@ -127,28 +61,22 @@ function AnnotationActionBar({
 
   return (
     <div className="flex text-[16px]" data-testid="annotation-action-bar">
-      {showEditAction && (
-        <IconButton icon={EditIcon} title="Edit" onClick={onEdit} />
-      )}
-      {showDeleteAction && (
-        <IconButton icon={TrashIcon} title="Delete" onClick={onDelete} />
-      )}
       <IconButton icon={ReplyIcon} title="Reply" onClick={onReplyClick} />
       {shareLink && (
         <AnnotationShareControl annotation={annotation} shareUri={shareLink} />
       )}
-      {showFlagAction && !annotation.flagged && (
+      {showFlagButton &&  (
         <IconButton
           icon={FlagIcon}
           title="Report this annotation to moderators"
           onClick={onFlag}
         />
       )}
-      {showFlagAction && annotation.flagged && (
+      {annotation.flagged && (
         <IconButton
           pressed={true}
           icon={FlagFilledIcon}
-          title="Annotation has been reported to the moderators"
+          title="Annotation has been reported"
         />
       )}
     </div>
@@ -157,6 +85,5 @@ function AnnotationActionBar({
 
 export default withServices(AnnotationActionBar, [
   'annotationsService',
-  'settings',
   'toastMessenger',
 ]);

@@ -48,8 +48,8 @@ function GroupList({ settings }: GroupListProps) {
     [currentGroups],
   );
 
-  // TODO: nostr: review this, add new group maybe?
-  //const newGroupLink = store.getLink('groups.new');
+  // TODO: nostr: review this, how to join a new group?
+  // const newGroupLink = store.getLink('groups.new');
 
   // The group whose submenu is currently open, or `null` if no group item is
   // currently expanded.

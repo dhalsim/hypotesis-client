@@ -5,7 +5,6 @@ import type {
   SavedAnnotation,
   Annotation,
 } from '../../types/api';
-import type { AnnotationEventType, SidebarSettings } from '../../types/config';
 
 import * as metadata from '../helpers/annotation-metadata';
 import {
@@ -15,8 +14,6 @@ import {
 } from '../helpers/permissions';
 import type { SidebarStore } from '../store';
 
-import type { AnnotationActivityService } from './annotation-activity';
-import type { APIService } from './api';
 import type { NostrPublisherService } from './nostr-publisher';
 
 /**
@@ -25,23 +22,14 @@ import type { NostrPublisherService } from './nostr-publisher';
  */
 // @inject
 export class AnnotationsService {
-  private _activity: AnnotationActivityService;
-  private _api: APIService;
   private _nostrPublisherService: NostrPublisherService;
-  private _settings: SidebarSettings;
   private _store: SidebarStore;
 
   constructor(
-    annotationActivity: AnnotationActivityService,
-    api: APIService,
     nostrPublisherService: NostrPublisherService,
-    settings: SidebarSettings,
     store: SidebarStore,
   ) {
-    this._activity = annotationActivity;
-    this._api = api;
     this._nostrPublisherService = nostrPublisherService;
-    this._settings = settings;
     this._store = store;
   }
 
@@ -115,11 +103,6 @@ export class AnnotationsService {
     // Highlights are peculiar in that they always have private permissions
     if (metadata.isHighlight(annotation)) {
       annotation.permissions = privatePermissions(profile.publicKeyHex);
-    }
-
-    // Attach information about the current context (eg. LMS assignment).
-    if (this._settings.annotationMetadata) {
-      annotation.metadata = { ...this._settings.annotationMetadata };
     }
 
     return annotation;
@@ -198,20 +181,11 @@ export class AnnotationsService {
   }
 
   /**
-   * Delete an annotation via the API and update the store.
-   */
-  async delete(annotation: SavedAnnotation) {
-    await this._api.annotation.delete({ id: annotation.id });
-    this._activity.reportActivity('delete', annotation);
-    this._store.removeAnnotations([annotation]);
-  }
-
-  /**
    * Flag an annotation for review by a moderator.
    */
   async flag(annotation: SavedAnnotation) {
-    await this._api.annotation.flag({ id: annotation.id });
-    this._activity.reportActivity('flag', annotation);
+    // TODO: nostr: flag
+    // await this._api.annotation.flag({ id: annotation.id });    
     this._store.updateFlagStatus(annotation.id, true);
   }
 
@@ -238,7 +212,6 @@ export class AnnotationsService {
    */
   async save(annotation: Annotation) {
     let saved: Promise<SavedAnnotation>;
-    let eventType: AnnotationEventType;
 
     const annotationWithChanges = this._applyDraftChanges(annotation);
 
@@ -265,18 +238,17 @@ export class AnnotationsService {
         });
       } else {
         saved = this._nostrPublisherService.publishAnnotation(annotationWithChanges);
-      }
-      
-      eventType = 'create';
+      }      
     } else {
       throw new Error('Not implemented');
     }
 
     let savedAnnotation: SavedAnnotation;
+    
     this._store.annotationSaveStarted(annotation);
+    
     try {
       savedAnnotation = await saved;
-      this._activity.reportActivity(eventType, savedAnnotation);
     } finally {
       this._store.annotationSaveFinished(annotation);
     }

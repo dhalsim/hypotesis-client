@@ -14,7 +14,6 @@ import { useSidebarStore } from '../store';
 import Annotation from './Annotation';
 import AnnotationHeader from './Annotation/AnnotationHeader';
 import EmptyAnnotation from './Annotation/EmptyAnnotation';
-import ModerationBanner from './ModerationBanner';
 
 type ThreadCollapseControlProps = {
   threadIsCollapsed: boolean;
@@ -128,7 +127,6 @@ function Thread({ thread, threadsService }: ThreadProps) {
         <>
           {thread.annotation ? (
             <>
-              <ModerationBanner annotation={thread.annotation} />
               <Annotation
                 annotation={thread.annotation}
                 isReply={isReply}

@@ -2,11 +2,10 @@ import { useEffect, useRef } from 'preact/hooks';
 
 import { tabForAnnotation } from '../helpers/tabs';
 import { withServices } from '../service-context';
+import { useSidebarStore } from '../store';
 import type { FrameSyncService } from '../services/frame-sync';
 import type { NostrFetchHighlightsService } from '../services/nostr-fetch-highlights';
 
-import { useSidebarStore } from '../store';
-import LoggedOutMessage from './LoggedOutMessage';
 import SidebarContentError from './SidebarContentError';
 import SidebarTabs from './SidebarTabs';
 import FilterControls from './search/FilterControls';
@@ -69,6 +68,12 @@ function SidebarView({
     !isLoggedIn &&
     !hasDirectLinkedAnnotationError &&
     !isLoading;
+
+  useEffect(() => {
+    if (showLoggedOutMessage) {
+      store.openSidebarPanel('nostrConnectPanel');
+    }
+  }, [showLoggedOutMessage, store]);
 
   const prevGroupId = useRef(focusedGroupId);
 
@@ -134,7 +139,6 @@ function SidebarView({
         <SidebarContentError errorType="group" onLoginRequest={onLogin} />
       )}
       {!hasContentError && <SidebarTabs isLoading={isLoading} />}
-      {showLoggedOutMessage && <LoggedOutMessage onLogin={onLogin} />}
     </div>
   );
 }

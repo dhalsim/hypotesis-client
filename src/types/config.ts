@@ -9,22 +9,15 @@ import type { FocusUserInfo } from './rpc';
  * `onXXXProvided` booleans are correspondingly set in the annotator if a
  *  particular function is provided.
  */
-export type Service = {
-  apiUrl: string;
-  // TODO: nostr: remove this once Nostr is fully implemented
-  authority: string;
-  grantToken: string;
-  
+export type Service = {  
   icon?: string;
   /**
    * List of IDs of groups to show. If the embedder specifies "$rpc:requestGroups",
    * the list of groups is fetched from a parent frame and `groups` is
    * replaced with a promise to represent the result.
    */
-  groups?: string[] | Promise<string[]> | '$rpc:requestGroups';
-  allowFlagging?: boolean;
-  allowLeavingGroups?: boolean;
-  enableShareLinks?: boolean;
+  groups?: string[];
+
   onHelpRequest?: () => void;
   onHelpRequestProvided?: boolean;
   onLoginRequest?: () => void;
@@ -52,28 +45,12 @@ export type SentryConfig = {
  * See `h.views.client` in the "h" application.
  */
 export type ConfigFromSidebar = {
-  apiUrl: string;
-  authDomain: string;
-  oauthClientId: string;
-  rpcAllowedOrigins: string[];
-  sentry?: SentryConfig;
   nostrProfileUrl?: string;
   nostrEventUrl?: string;
   nostrSearchUrl?: string;
 };
 
-/**
- * May be provided by `ConfigFromAnnotator` to configure a known ancestor
- * frame as the "embedder" frame. `ConfigFromEmbedder` will be requested from
- * this frame, and additional messaging (via postMessage) may be configured
- * between the sidebar frame and this embedder frame.
- */
-export type EmbedderFrameConfig = {
-  ancestorLevel: number;
-  origin: string;
-};
-
-export type AnnotationEventType = 'create' | 'update' | 'flag' | 'delete';
+export type AnnotationEventType = 'create' | 'flag';
 
 /**
  * An "embedder frame" may provide configuration to be notified (via JSON RPC)
@@ -205,17 +182,6 @@ export type ConfigFromHost = {
 };
 
 /**
- * Settings derived from `ConfigFromAnnotator["requestConfigFromFrame"]`.
- * These settings allow `ConfigFromEmbedder` to be requested from the
- * designated frame, and allows subsequent communication between the sidebar
- * and embedder frames.
- */
-export type RPCSettings = {
-  targetFrame: Window;
-  origin: EmbedderFrameConfig['origin'];
-};
-
-/**
  * `SidebarSettings` are created by merging "sidebar configuration"
  * (`ConfigFromSidebar`) with  "host configuration" (either
  * `ConfigFromAnnotator` OR `ConfigFromEmbedder`).
@@ -264,53 +230,6 @@ export type RPCSettings = {
  * |  +------------------------------------------+                          |
  * +------------------------------------------------------------------------+
  */
-export type SidebarSettings = ConfigFromAnnotator &
-  ConfigFromEmbedder &
-  ConfigFromSidebar & { rpc?: RPCSettings };
 
-/**
- * Configuration passed to Hypothesis client from the host frame.
- */
-export type ConfigFromAnnotator = ConfigFromHost & {
-  /**
-   * Instructs the client to fetch configuration from an ancestor of the host
-   * frame.
-   *
-   * This is primarily used in Hypothesis's LMS integration.
-   */
-  requestConfigFromFrame?: EmbedderFrameConfig;
-};
-
-/**
- * Configuration passed to Hypothesis client from the embedder frame. This is
- * primarily used in Hypothesis's LMS integration.
- *
- * This is a superset of the configuration which can be passed from the host
- * frame which enables some additional configuration that we don't want to
- * allow arbitrary web pages to set.
- */
-export type ConfigFromEmbedder = ConfigFromHost & {
-  /**
-   * Metadata about the context which the client should store with new
-   * annotations in the `metadata` field.
-   *
-   * The Hypothesis LMS app uses this field to attach information about the
-   * current assignment, course etc. to annotations.
-   */
-  annotationMetadata?: object;
-
-  /**
-   * Feature flags to enable. When a flag is listed here, it will be turned
-   * on even if disabled in the H user profile.
-   */
-  features?: string[];
-
-  /**
-   * Request notifications be delivered to the frame specified by
-   * `requestConfigFromFrame` when certain annotation activity happens.
-   */
-  reportActivity?: ReportAnnotationActivityConfig;
-
-  /** Configuration for menu items etc. related to LMS instructor dashboard */
-  dashboard?: DashboardConfig;
-};
+export type SidebarSettings = ConfigFromHost &
+  ConfigFromSidebar;

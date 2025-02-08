@@ -17,12 +17,7 @@ import {
   preStartServer as preStartRPCServer,
 } from './cross-origin-rpc';
 import { ServiceContext } from './service-context';
-import { AnalyticsService } from './services/analytics';
-import { AnnotationActivityService } from './services/annotation-activity';
 import { AnnotationsService } from './services/annotations';
-import { APIService } from './services/api';
-import { APIRoutesService } from './services/api-routes';
-import { AuthService } from './services/auth';
 import { AutosaveService } from './services/autosave';
 import { DashboardService } from './services/dashboard';
 import { FrameSyncService } from './services/frame-sync';
@@ -30,8 +25,6 @@ import { GroupsService } from './services/groups';
 import { LocalStorageService } from './services/local-storage';
 import { PersistedDefaultsService } from './services/persisted-defaults';
 import { RouterService } from './services/router';
-import { ServiceURLService } from './services/service-url';
-import { StreamFilter } from './services/stream-filter';
 import { TagsService } from './services/tags';
 import { ThreadsService } from './services/threads';
 import { ToastMessengerService } from './services/toast-messenger';
@@ -44,7 +37,6 @@ import { NostrPublisherService } from './services/nostr-publisher';
 import { createSidebarStore } from './store';
 import type { SidebarStore } from './store';
 import { disableOpenerForExternalLinks } from './util/disable-opener-for-external-links';
-import * as sentry from './util/sentry';
 
 // Read settings rendered into sidebar app HTML by service/extension.
 const configFromSidebar = parseJsonConfig(document) as ConfigFromSidebar;
@@ -53,14 +45,9 @@ const configFromSidebar = parseJsonConfig(document) as ConfigFromSidebar;
 //
 // If any checks fail we'll log warnings and disable error reporting, but try
 // and continue anyway.
-// TODO: nostr: remove sentry
 const envOk = checkEnvironment(window);
 
-if (configFromSidebar.sentry && envOk) {
-  // Initialize Sentry. This is required at the top of this file
-  // so that it happens early in the app's startup flow
-  sentry.init(configFromSidebar.sentry);
-}
+console.warn('envOk', envOk);
 
 // Prevent tab-jacking.
 disableOpenerForExternalLinks(document.body);
@@ -94,11 +81,9 @@ function loadGroupsAndProfile(groups: GroupsService) {
 function initServices(
   autosaveService: AutosaveService,
   persistedDefaults: PersistedDefaultsService,
-  serviceURL: ServiceURLService,
 ) {
   autosaveService.init();
   persistedDefaults.init();
-  serviceURL.init();
 }
 
 /**
@@ -133,12 +118,7 @@ function startApp(settings: SidebarSettings, appEl: HTMLElement) {
 
   // Register services.
   container
-    .register('analytics', AnalyticsService)
     .register('annotationsService', AnnotationsService)
-    .register('annotationActivity', AnnotationActivityService)
-    .register('api', APIService)
-    .register('apiRoutes', APIRoutesService)
-    .register('auth', AuthService)
     .register('autosaveService', AutosaveService)
     .register('dashboard', DashboardService)
     .register('frameSync', FrameSyncService)
@@ -151,11 +131,8 @@ function startApp(settings: SidebarSettings, appEl: HTMLElement) {
     .register('nostrFetchHighlightsService', NostrFetchHighlightsService)
     .register('nostrPublisherService', NostrPublisherService)
     .register('nostrHighlightAdapterService', NostrHighlightAdapterService)
+
     .register('router', RouterService)
-    .register('serviceURL', ServiceURLService)
-    // TODO: nostr: suspect this is not needed
-    .register('streamFilter', StreamFilter)
-    
     .register('tags', TagsService)
     .register('threadsService', ThreadsService)
     .register('toastMessenger', ToastMessengerService)

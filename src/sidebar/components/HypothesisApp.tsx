@@ -6,7 +6,6 @@ import type { SidebarSettings } from '../../types/config';
 import { shouldAutoDisplayTutorial } from '../helpers/session';
 import { applyTheme } from '../helpers/theme';
 import { withServices } from '../service-context';
-import type { AuthService } from '../services/auth';
 import type { FrameSyncService } from '../services/frame-sync';
 import type { NostrSettingsService } from '../services/nostr-settings';
 import type { ToastMessengerService } from '../services/toast-messenger';
@@ -26,7 +25,6 @@ import TopBar from './TopBar';
 import SearchPanel from './search/SearchPanel';
 
 export type HypothesisAppProps = {
-  auth: AuthService;
   frameSync: FrameSyncService;
   settings: SidebarSettings;
   toastMessenger: ToastMessengerService;
@@ -151,7 +149,6 @@ function HypothesisApp({
 }
 
 export default withServices(HypothesisApp, [
-  'auth',
   'frameSync',
   'settings',
   'toastMessenger',

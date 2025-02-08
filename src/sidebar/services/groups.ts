@@ -8,7 +8,6 @@ import { isReply } from '../helpers/annotation-metadata';
 import { PUBLIC_GROUP_ID } from '../helpers/groups';
 import type { SidebarStore } from '../store';
 import { watch } from '../util/watch';
-import type { APIService } from './api';
 
 const DEFAULT_ORG_ID = '__default__';
 
@@ -42,15 +41,12 @@ function injectOrganizations(groups: Group[]) {
  */
 export class GroupsService {
   private _store: SidebarStore;
-  private _api: APIService;
   private _reloadSetUp: boolean;
 
   constructor(
     store: SidebarStore,
-    api: APIService
   ) {
     this._store = store;
-    this._api = api;
     this._reloadSetUp = false;
   }
 
@@ -217,13 +213,13 @@ export class GroupsService {
   /**
    * Request to remove the current user from a group.
    */
-  leave(id: string): Promise<void> {
-    // The groups list will be updated in response to a session state
-    // change notification from the server. We could improve the UX here
-    // by optimistically updating the session state
-    return this._api.group.member.delete({
-      pubid: id,
-      userid: 'me',
-    });
-  }
+  // leave(id: string): Promise<void> {
+  //   // The groups list will be updated in response to a session state
+  //   // change notification from the server. We could improve the UX here
+  //   // by optimistically updating the session state
+  //   return this._api.group.member.delete({
+  //     pubid: id,
+  //     userid: 'me',
+  //   });
+  // }
 }

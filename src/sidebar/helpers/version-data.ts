@@ -1,5 +1,6 @@
 import type { SegmentInfo } from '../../types/annotator';
 import type { Frame } from '../store/modules/frames';
+import { nostrDisplayName } from './nostr';
 
 type UserDetails = {
   userid?: string | null;
@@ -27,13 +28,9 @@ export class VersionData {
   ) {
     const noValueString = 'N/A';
 
-    let accountString = noValueString;
-    if (userInfo.userid) {
-      accountString = userInfo.userid;
-      if (userInfo.displayName) {
-        accountString = `${userInfo.displayName} (${accountString})`;
-      }
-    }
+    const accountString = userInfo.userid 
+      ? nostrDisplayName(userInfo.userid, userInfo.displayName, false)
+      : noValueString;
 
     this.version = '__VERSION__';
     this.userAgent = window_.navigator.userAgent;
