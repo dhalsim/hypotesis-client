@@ -557,11 +557,6 @@ export class Guest extends TinyEmitter implements Annotator, Destroyable {
   }
 
   async _connectSidebar() {
-    this._sidebarRPC.on(
-      'featureFlagsUpdated',
-      (flags: Record<string, boolean>) => this.features.update(flags),
-    );
-
     // Handlers for events sent when user hovers or clicks on an annotation card
     // in the sidebar.
     this._sidebarRPC.on('hoverAnnotations', (tags: string[]) =>

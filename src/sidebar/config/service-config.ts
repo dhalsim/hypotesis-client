@@ -9,5 +9,6 @@ export function serviceConfig({ services }: SidebarSettings): Service | null {
   if (Array.isArray(services) && services[0]) {
     return services[0];
   }
+  
   return null;
 }

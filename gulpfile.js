@@ -43,9 +43,6 @@ gulp.task('build-standalone-css', () =>
       './src/styles/annotator/highlights.scss',
       // other styles used by annotator (standalone)
       './src/styles/annotator/pdfjs-overrides.scss',
-
-      // Vendor
-      './node_modules/katex/dist/katex.min.css',
     ],
     { tailwindConfig },
   ),
@@ -65,7 +62,6 @@ gulp.task(
   gulp.series('build-css', function watchCSS() {
     gulp.watch(
       [
-        'node_modules/katex/dist/katex.min.css',
         'src/styles/**/*.scss',
         'src/**/*.tsx',
         'dev-server/ui-playground/**/*.tsx',

@@ -79,3 +79,47 @@ export async function retryWithBackoff<T>(
 
   throw new Error('Max retries reached');
 }
+
+export function nostrDisplayName(
+  pubkeyHex: string,
+  displayName?: string | null,
+  shorten: boolean = true
+): string {
+  if (displayName) {
+    return displayName;
+  }
+
+  const npub = nip19.npubEncode(pubkeyHex);
+
+  if (shorten) {
+    return npub.slice(0, 5) + ':' + npub.slice(-5);
+  }
+
+  return npub;
+}
+
+export function normalizeUrl(url: string) {
+  try {
+    // Parse the URL
+    const parsedUrl = new URL(url);
+
+    // Convert scheme and hostname to lowercase
+    parsedUrl.protocol = parsedUrl.protocol.toLowerCase();
+    parsedUrl.hostname = parsedUrl.hostname.toLowerCase();
+
+    // Remove the default port
+    if ((parsedUrl.protocol === 'http:' && parsedUrl.port === '80') || 
+        (parsedUrl.protocol === 'https:' && parsedUrl.port === '443')) {
+      parsedUrl.port = '';
+    }
+
+    parsedUrl.hash = '';
+
+    // Return the normalized URL
+    return parsedUrl.toString();
+  } catch (error) {
+    console.error('Invalid URL:', error.message);
+    
+    return null;
+  }
+}

@@ -1,8 +1,11 @@
-import { SimplePool } from 'nostr-tools';
-
 import type { SidebarStore } from '../store';
 import type { NostrProfile } from '../store/modules/nostr';
 import type { NostrRelaysService } from './nostr-relays';
+
+interface CachedProfile {
+  profile: NostrProfile;
+  timestamp: number;
+}
 
 /**
  * Service for managing Nostr profile loading and caching.
@@ -11,10 +14,38 @@ import type { NostrRelaysService } from './nostr-relays';
 export class NostrProfileService {
   private _store: SidebarStore;
   private _nostrRelaysService: NostrRelaysService;
+  private _profileCache: Map<string, CachedProfile>;
+  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
 
   constructor(store: SidebarStore, nostrRelaysService: NostrRelaysService) {
     this._store = store;
     this._nostrRelaysService = nostrRelaysService;
+    this._profileCache = new Map();
+  }
+
+  private getCachedProfile(publicKeyHex: string): NostrProfile | null {
+    const cached = this._profileCache.get(publicKeyHex);
+    
+    if (!cached) {
+      return null;
+    }
+
+    const now = Date.now();
+    if (now - cached.timestamp > this.CACHE_DURATION) {
+      // Cache expired
+      this._profileCache.delete(publicKeyHex);
+      
+      return null;
+    }
+
+    return cached.profile;
+  }
+
+  private cacheProfile(profile: NostrProfile) {
+    this._profileCache.set(profile.publicKeyHex, {
+      profile,
+      timestamp: Date.now(),
+    });
   }
 
   /**
@@ -29,20 +60,35 @@ export class NostrProfileService {
         loading: true,
       };
 
-      this._store.setProfile(initialProfile);
+      this._store.setNostrProfile(initialProfile);
+
+      // Check cache first
+      const cachedProfile = this.getCachedProfile(publicKeyHex);
+      
+      if (cachedProfile) {
+        this._store.setNostrProfile(cachedProfile);
+        
+        return;
+      }
 
       const profile = await this.fetchProfile(publicKeyHex);
-
-      this._store.setProfile(profile);
+      this.cacheProfile(profile);
+      this._store.setNostrProfile(profile);
     } catch (err) {
       console.error('Failed to load Nostr profile:', err);
       // Clear any existing profile on error
-      this._store.setProfile(null);
+      this._store.setNostrProfile(null);
     }
   }
 
   async fetchProfile(publicKeyHex: string): Promise<NostrProfile> {
-    const pool = new SimplePool();
+    const cachedProfile = this.getCachedProfile(publicKeyHex);
+
+    if (cachedProfile) {
+      return cachedProfile;
+    }
+
+    const pool = this._nostrRelaysService.getPool();
     const relays = this._nostrRelaysService.getReadRelays().map(
       relay => relay.url
     );
@@ -73,9 +119,15 @@ export class NostrProfileService {
   }
 
   /**
-   * Clear the currently loaded profile
+   * Clear the currently loaded profile and its cache entry
    */
   clearProfile() {
-    this._store.setProfile(null);
+    const currentProfile = this._store.getNostrProfile();
+    
+    if (currentProfile) {
+      this._profileCache.delete(currentProfile.publicKeyHex);
+    }
+    
+    this._store.setNostrProfile(null);
   }
 }

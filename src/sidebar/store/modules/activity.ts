@@ -76,8 +76,10 @@ const reducers = {
     ) {
       addToStarted.push(action.annotation.$tag);
     }
+    
     const updatedSaves =
       state.activeAnnotationSaveRequests.concat(addToStarted);
+    
     return {
       ...state,
       activeAnnotationSaveRequests: updatedSaves,
@@ -88,6 +90,7 @@ const reducers = {
     const updatedSaves = state.activeAnnotationSaveRequests.filter(
       $tag => $tag !== action.annotation.$tag,
     );
+    
     return {
       ...state,
       activeAnnotationSaveRequests: updatedSaves,

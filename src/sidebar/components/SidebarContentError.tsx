@@ -22,7 +22,7 @@ export default function SidebarContentError({
   showClearSelection = false,
 }: SidebarContentErrorProps) {
   const store = useSidebarStore();
-  const isLoggedIn = store.isLoggedIn();
+  const isLoggedIn = store.isNostrLoggedIn();
 
   const errorTitle =
     errorType === 'annotation' ? 'Annotation unavailable' : 'Group unavailable';

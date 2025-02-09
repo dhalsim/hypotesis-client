@@ -6,12 +6,13 @@ export type TabHeaderProps = {
   children: ComponentChildren;
   /** Title for the close button. */
   closeTitle: string;
+  onClose: () => void;
 };
 
 /**
  * Render a header to go above a Card, with contents in a TabList
  */
-export default function TabHeader({ children, closeTitle }: TabHeaderProps) {
+export default function TabHeader({ children, closeTitle, onClose }: TabHeaderProps) {
   return (
     <div data-testid="tab-header" className="flex items-center">
       <CloseButton
@@ -33,6 +34,7 @@ export default function TabHeader({ children, closeTitle }: TabHeaderProps) {
           'touch:!min-h-0',
         )}
         title={closeTitle}
+        onClick={onClose}
         variant="custom"
         size="sm"
       />

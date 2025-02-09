@@ -1,9 +1,8 @@
+// TODO: nostr: review this module
 import { createSelector } from 'reselect';
 
 import type { Group } from '../../../types/api';
 import { createStoreModule, makeAction } from '../create-store';
-import { sessionModule } from './session';
-import type { State as SessionState } from './session';
 
 type GroupID = Group['id'];
 
@@ -33,9 +32,11 @@ const reducers = {
         filteredGroupIds: null,
       };
     }
+    
     const filteredGroups = state.groups.filter(g =>
       action.filteredGroupIds.includes(g.id),
     );
+    
     if (!filteredGroups.length) {
       // If there are no matches in the full set of groups for any of the
       // provided `filteredGroupIds`, don't set the filter.
@@ -43,11 +44,14 @@ const reducers = {
         filteredGroupIds: null,
       };
     }
+    
     // Ensure we have a focused group that is in the set of filtered groups
     let focusedGroupId = state.focusedGroupId;
+    
     if (!focusedGroupId || !action.filteredGroupIds.includes(focusedGroupId)) {
       focusedGroupId = filteredGroups[0].id;
     }
+    
     return {
       filteredGroupIds: action.filteredGroupIds,
       focusedGroupId,
@@ -56,12 +60,15 @@ const reducers = {
 
   FOCUS_GROUP(state: State, action: { id: string }) {
     const group = state.groups.find(g => g.id === action.id);
+    
     if (!group) {
       console.error(
         `Attempted to focus group ${action.id} which is not loaded`,
       );
+      
       return {};
     }
+    
     return { focusedGroupId: action.id };
   },
 
@@ -128,6 +135,7 @@ function focusedGroup(state: State): Group | null {
   if (!state.focusedGroupId) {
     return null;
   }
+  
   return getGroup(state, state.focusedGroupId) ?? null;
 }
 
@@ -152,6 +160,7 @@ function filteredGroups(state: State) {
   if (!state.filteredGroupIds) {
     return state.groups;
   }
+  
   return state.groups.filter(g => state.filteredGroupIds?.includes(g.id));
 }
 
@@ -185,39 +194,21 @@ const getInScopeGroups = createSelector(
 );
 
 // Selectors that receive root state.
-
 type RootState = {
   groups: State;
-  session: SessionState;
 };
 
 /**
- * Return groups the logged-in user is a member of.
- */
-const getMyGroups = createSelector(
-  (rootState: RootState) => filteredGroups(rootState.groups),
-  (rootState: RootState) =>
-    sessionModule.selectors.isLoggedIn(rootState.session),
-  (groups, loggedIn) => {
-    // If logged out, the Public group still has isMember set to true so only
-    // return groups with membership in logged in state.
-    if (loggedIn) {
-      return groups.filter(g => g.isMember);
-    }
-    return [];
-  },
-);
-
-/**
  * Return groups that don't show up in Featured and My Groups.
+ * 
+ * TODO: nostr: review this selector, think of a way to get the groups/relays the user is a member of
  */
 const getCurrentlyViewingGroups = createSelector(
   (rootState: RootState) => filteredGroups(rootState.groups),
-  (rootState: RootState) => getMyGroups(rootState),
   (rootState: RootState) => getFeaturedGroups(rootState.groups),
-  (allGroups, myGroups, featuredGroups) => {
+  (allGroups, featuredGroups) => {
     return allGroups.filter(
-      g => !myGroups.includes(g) && !featuredGroups.includes(g),
+      g => !featuredGroups.includes(g),
     );
   },
 );
@@ -243,6 +234,5 @@ export const groupsModule = createStoreModule(initialState, {
   },
   rootSelectors: {
     getCurrentlyViewingGroups,
-    getMyGroups,
   },
 });

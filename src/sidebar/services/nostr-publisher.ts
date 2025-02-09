@@ -1,4 +1,4 @@
-import { finalizeEvent, SimplePool, type VerifiedEvent } from 'nostr-tools';
+import { finalizeEvent, type VerifiedEvent } from 'nostr-tools';
 
 import type { Annotation, SavedAnnotation } from "../../types/api";
 import type { SidebarStore } from '../store';
@@ -7,6 +7,7 @@ import { generateHexString } from '../../shared/random';
 import { nostrEventUrl } from '../helpers/nostr';
 import type { NostrRelaysService } from './nostr-relays';
 import type { NostrHighlightAdapterService } from './nostr-highlight-adapter';
+import type { NostrThreadAdapterService } from './nostr-thread-adapter';
 import type { SidebarSettings } from '../../types/config';
 
 export type HighlightsFetchOptions = {
@@ -42,17 +43,20 @@ export class NostrPublisherService {
   private _settings: SidebarSettings;
   private _nostrRelaysService: NostrRelaysService;
   private _nostrHighlightAdapterService: NostrHighlightAdapterService;
+  private _nostrThreadAdapterService: NostrThreadAdapterService;
   private _store: SidebarStore;
 
   constructor(
     settings: SidebarSettings,
     nostrRelaysService: NostrRelaysService,
     nostrHighlightAdapterService: NostrHighlightAdapterService,
+    nostrThreadAdapterService: NostrThreadAdapterService,
     store: SidebarStore
   ) {
     this._settings = settings;
     this._nostrRelaysService = nostrRelaysService;
     this._nostrHighlightAdapterService = nostrHighlightAdapterService;
+    this._nostrThreadAdapterService = nostrThreadAdapterService;
     this._store = store;
   }
 
@@ -60,7 +64,7 @@ export class NostrPublisherService {
     const event = await this._nostrHighlightAdapterService.convertToEvent(annotation);
     
     const relays = this._nostrRelaysService.getWriteRelays();
-    const pool = new SimplePool();
+    const pool = this._nostrRelaysService.getPool();
 
     const connectMode = this._store.getConnectMode();
 
@@ -99,14 +103,14 @@ export class NostrPublisherService {
     tags,
     text
   }: PublishReplyOptions): Promise<SavedAnnotation> {
-    const event = await this._nostrHighlightAdapterService.convertToReplyEvent({
+    const event = await this._nostrThreadAdapterService.convertToReplyEvent({
       parentAnnotation,
       tags,
       text
     });
 
     const relays = this._nostrRelaysService.getWriteRelays();
-    const pool = new SimplePool();
+    const pool = this._nostrRelaysService.getPool();
 
     const connectMode = this._store.getConnectMode();
 

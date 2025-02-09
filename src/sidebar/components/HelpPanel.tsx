@@ -1,13 +1,13 @@
+import classnames from 'classnames';
 import { Card, Link, Tab } from '@hypothesis/frontend-shared';
 import { ExternalIcon } from '@hypothesis/frontend-shared';
-import classnames from 'classnames';
 import { useCallback, useId, useMemo, useState } from 'preact/hooks';
 
-import { username } from '../helpers/account-id';
 import { VersionData } from '../helpers/version-data';
-import { withServices } from '../service-context';
-import type { SessionService } from '../services/session';
 import { useSidebarStore } from '../store';
+import { useService } from '../service-context';
+import type { LocalStorageService } from '../services/local-storage';
+
 import SidebarPanel from './SidebarPanel';
 import Tutorial from './Tutorial';
 import VersionInfo from './VersionInfo';
@@ -40,22 +40,18 @@ function HelpPanelTab({ linkText, url }: HelpPanelTabProps) {
   );
 }
 
-type HelpPanelProps = {
-  session: SessionService;
-};
-
 type PanelKey = 'tutorial' | 'versionInfo';
 
 /**
  * A help sidebar panel with two sub-panels: tutorial and version info.
  */
-function HelpPanel({ session }: HelpPanelProps) {
+export default function HelpPanel() {
   const store = useSidebarStore();
+  const localStorage = useService('localStorage') as LocalStorageService;
   const frames = store.frames();
   const mainFrame = store.mainFrame();
-  const profile = store.profile();
-  const displayName =
-    profile.user_info?.display_name ?? username(profile.userid);
+  const profile = store.getNostrProfile();
+  const displayName = profile?.displayName;
   const tutorialTabId = useId();
   const tutorialPanelId = useId();
   const versionTabId = useId();
@@ -65,8 +61,7 @@ function HelpPanel({ session }: HelpPanelProps) {
   // auto-open triggering of this panel is owned by the `HypothesisApp` component.
   // This reference is such that we know whether we should "dismiss" the tutorial
   // (permanently for this user) when it is closed.
-  const hasAutoDisplayPreference =
-    !!store.profile().preferences.show_sidebar_tutorial;
+  const hasAutoDisplayPreference = localStorage.getItem('openHelpPanel') !== 'false';
 
   // The "Tutorial" (getting started) subpanel is the default panel shown
   const [activeSubPanel, setActiveSubPanel] = useState<PanelKey>('tutorial');
@@ -86,14 +81,15 @@ function HelpPanel({ session }: HelpPanelProps) {
     });
 
     return new VersionData(
-      { userid: profile.userid, displayName },
+      { userid: profile?.publicKeyHex, displayName },
       documentFrames,
     );
   }, [profile, displayName, frames, mainFrame]);
 
   // The support ticket URL encodes some version info in it to pre-fill in the
   // create-new-ticket form
-  const supportTicketURL = `https://web.hypothes.is/get-help/?sys_info=${versionData.asEncodedURLString()}`;
+  const supportTicketURL = 
+  `https://web.hypothes.is/get-help/?sys_info=${versionData.asEncodedURLString()}`;
 
   const onActiveChanged = useCallback(
     (active: boolean) => {
@@ -101,10 +97,10 @@ function HelpPanel({ session }: HelpPanelProps) {
         // If the tutorial is currently being auto-displayed, update the user
         // preference to disable the auto-display from happening on subsequent
         // app launches
-        session.dismissSidebarTutorial();
+        localStorage.setItem('openHelpPanel', 'false');
       }
     },
-    [session, hasAutoDisplayPreference],
+    [hasAutoDisplayPreference, localStorage],
   );
 
   return (
@@ -114,7 +110,9 @@ function HelpPanel({ session }: HelpPanelProps) {
       onActiveChanged={onActiveChanged}
       variant="custom"
     >
-      <TabHeader closeTitle="Close help panel">
+      <TabHeader closeTitle="Close help panel" onClose={
+        () => { store.toggleSidebarPanel('help'); }
+      }>
         <Tab
           id={tutorialTabId}
           aria-controls={tutorialPanelId}
@@ -172,5 +170,3 @@ function HelpPanel({ session }: HelpPanelProps) {
     </SidebarPanel>
   );
 }
-
-export default withServices(HelpPanel, ['session']);

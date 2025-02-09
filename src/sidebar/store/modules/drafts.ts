@@ -76,6 +76,7 @@ const reducers = {
     const drafts = state.drafts.filter(draft => {
       return !draft.match(action.annotation);
     });
+    
     return { drafts };
   },
 

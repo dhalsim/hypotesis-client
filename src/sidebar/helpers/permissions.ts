@@ -1,3 +1,4 @@
+// TODO: nostr: do we need this, maybe in groups?
 /**
  * Utils for working with permissions principals on annotations.
  *

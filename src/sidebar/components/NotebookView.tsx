@@ -1,30 +1,27 @@
-import { Link, Panel } from '@hypothesis/frontend-shared';
+
 import classnames from 'classnames';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import scrollIntoView from 'scroll-into-view';
 
-import { ResultSizeError } from '../search-client';
 import { withServices } from '../service-context';
-import type { LoadAnnotationsService } from '../services/load-annotations';
-import type { StreamerService } from '../services/streamer';
 import { useSidebarStore } from '../store';
 import NotebookFilters from './NotebookFilters';
 import NotebookResultCount from './NotebookResultCount';
 import PaginatedThreadList from './PaginatedThreadList';
-import PendingUpdatesNotification from './PendingUpdatesNotification';
 import { useRootThread } from './hooks/use-root-thread';
 
-export type NotebookViewProps = {
+// export type NotebookViewProps = {
+  // TODO: nostr: need to use NostrFetchHighlightsService
   // injected
-  loadAnnotationsService: LoadAnnotationsService;
-  streamer: StreamerService;
-};
+  // loadAnnotationsService: LoadAnnotationsService;
+// };
+
 /**
  * The main content of the "notebook" route (https://hypothes.is/notebook)
  *
  * @param {NotebookViewProps} props
  */
-function NotebookView({ loadAnnotationsService, streamer }: NotebookViewProps) {
+function NotebookView() {
   const store = useSidebarStore();
 
   const filters = store.getFilterValues();
@@ -45,62 +42,41 @@ function NotebookView({ loadAnnotationsService, streamer }: NotebookViewProps) {
   // likely to be focused (eg. because the notebook has been configured to
   // display a particular group when launched), we can optimistically fetch
   // annotations from that group.
-  const groupId = focusedGroup?.id || store.directLinkedGroupId();
+  // const groupId = focusedGroup?.id || store.directLinkedGroupId();
 
   const lastPaginationPage = useRef(1);
   const [paginationPage, setPaginationPage] = useState(1);
 
-  const [hasTooManyAnnotationsError, setHasTooManyAnnotationsError] =
-    useState(false);
-
-  // Load all annotations in the group, unless there are more than 5000
-  // of them: this is a performance safety valve.
-  const maxResults = 5000;
-
-  const onLoadError = (error: Error) => {
-    if (error instanceof ResultSizeError) {
-      setHasTooManyAnnotationsError(true);
-    }
-  };
-
-  const hasFetchedProfile = store.hasFetchedProfile();
-
-  // Establish websocket connection
-  useEffect(() => {
-    if (hasFetchedProfile) {
-      streamer.connect({ applyUpdatesImmediately: false });
-    }
-  }, [hasFetchedProfile, streamer]);
-
   // Load all annotations; re-load if `focusedGroup` changes
-  useEffect(() => {
-    // NB: In current implementation, this will only happen/load once (initial
-    // annotation fetch on application startup), as there is no mechanism
-    // within the Notebook to change the `focusedGroup`. If the focused group
-    // is changed within the sidebar and the Notebook re-opened, an entirely
-    // new iFrame/app is created. This will need to be revisited.
-    store.setSortKey('Newest');
-    if (groupId) {
-      loadAnnotationsService.load({
-        groupId,
-        // Load annotations in reverse-chronological order because that is how
-        // threads are sorted in the notebook view. By aligning the fetch
-        // order with the thread display order we reduce the changes in visible
-        // content as annotations are loaded. This reduces the amount of time
-        // the user has to wait for the content to load before they can start
-        // reading it.
-        //
-        // Fetching is still suboptimal because we fetch both annotations and
-        // replies together from the backend, but the user initially sees only
-        // the top-level threads.
-        sortBy: 'updated',
-        sortOrder: 'desc',
-        maxResults,
-        onError: onLoadError,
-        streamFilterBy: 'group',
-      });
-    }
-  }, [loadAnnotationsService, groupId, store]);
+  // useEffect(() => {
+  //   // NB: In current implementation, this will only happen/load once (initial
+  //   // annotation fetch on application startup), as there is no mechanism
+  //   // within the Notebook to change the `focusedGroup`. If the focused group
+  //   // is changed within the sidebar and the Notebook re-opened, an entirely
+  //   // new iFrame/app is created. This will need to be revisited.
+  //   store.setSortKey('Newest');
+    
+  //   if (groupId) {
+  //     loadAnnotationsService.load({
+  //       groupId,
+  //       // Load annotations in reverse-chronological order because that is how
+  //       // threads are sorted in the notebook view. By aligning the fetch
+  //       // order with the thread display order we reduce the changes in visible
+  //       // content as annotations are loaded. This reduces the amount of time
+  //       // the user has to wait for the content to load before they can start
+  //       // reading it.
+  //       //
+  //       // Fetching is still suboptimal because we fetch both annotations and
+  //       // replies together from the backend, but the user initially sees only
+  //       // the top-level threads.
+  //       sortBy: 'updated',
+  //       sortOrder: 'desc',
+  //       maxResults,
+  //       onError: onLoadError,
+  //       streamFilterBy: 'group',
+  //     });
+  //   }
+  // }, [loadAnnotationsService, groupId, store]);
 
   const onChangePage = (newPage: number) => {
     setPaginationPage(newPage);
@@ -139,7 +115,7 @@ function NotebookView({ loadAnnotationsService, streamer }: NotebookViewProps) {
             'right-[4rem]',
           )}
         >
-          <PendingUpdatesNotification />
+          {/* <PendingUpdatesNotification /> */}
         </div>
       </div>
       <div className="justify-self-start">
@@ -154,27 +130,6 @@ function NotebookView({ loadAnnotationsService, streamer }: NotebookViewProps) {
         />
       </div>
       <div className="lg:col-span-2">
-        {hasTooManyAnnotationsError && (
-          <div className="py-4" data-testid="notebook-messages">
-            <Panel title="Too many results to show">
-              <p>
-                This preview of the Notebook can show{' '}
-                <strong>up to {maxResults} results</strong> at a time (there are{' '}
-                {resultCount} to show here).
-              </p>
-              <p>
-                <Link
-                  href="mailto:support@hypothes.is?subject=Hypothesis%20Notebook&body=Please%20notify%20me%20when%20the%20Hypothesis%20Notebook%20is%20updated%20to%20support%20more%20than%205000%20annotations"
-                  underline="always"
-                >
-                  Contact us
-                </Link>{' '}
-                if you would like to be notified when support for more
-                annotations is available.
-              </p>
-            </Panel>
-          </div>
-        )}
         <PaginatedThreadList
           currentPage={paginationPage}
           isLoading={isLoading}
@@ -187,6 +142,5 @@ function NotebookView({ loadAnnotationsService, streamer }: NotebookViewProps) {
 }
 
 export default withServices(NotebookView, [
-  'loadAnnotationsService',
-  'streamer',
+  // 'loadAnnotationsService'
 ]);
