@@ -5,23 +5,16 @@ import type { SidebarStore } from '../store';
 
 import type { NostrRelaysService } from './nostr-relays';
 import type { NostrHighlightAdapterService } from './nostr-highlight-adapter';
+import type { NostrFetchThreadsService } from './nostr-fetch-threads';
 
-export type HighlightsFetchOptions = {
+type HighlightsFetchOptions = {
+  /**
+   * The URI of the highlights to fetch
+   */
   uri: string;
 
   /**
-   * Optional error handler for SearchClient. Default error handling logs errors
-   * to console.
-   */
-  onError?: (error: Error) => void;
-};
-
-export type ThreadFetchOptions = {
-  rootEventId: string;
-  
-  /**
-   * Optional error handler for SearchClient. Default error handling logs errors
-   * to console.
+   * Optional error handler.
    */
   onError?: (error: Error) => void;
 };
@@ -32,16 +25,19 @@ export type ThreadFetchOptions = {
 export class NostrFetchHighlightsService {
   private _nostrRelaysService: NostrRelaysService;
   private _nostrHighlightAdapterService: NostrHighlightAdapterService;
+  private _nostrFetchThreadsService: NostrFetchThreadsService;
   private _store: SidebarStore;
   private _subCloser: SubCloser | null = null;
 
   constructor(
     nostrRelaysService: NostrRelaysService,
     nostrHighlightAdapterService: NostrHighlightAdapterService,
+    nostrFetchThreadsService: NostrFetchThreadsService,
     store: SidebarStore
   ) {
     this._nostrRelaysService = nostrRelaysService;
     this._nostrHighlightAdapterService = nostrHighlightAdapterService;
+    this._nostrFetchThreadsService = nostrFetchThreadsService;
     this._store = store;
   }
 
@@ -54,11 +50,13 @@ export class NostrFetchHighlightsService {
     store.annotationFetchStarted();
 
     const adapter = this._nostrHighlightAdapterService;
+    const adapterConvert = adapter.convertToAnnotation.bind(adapter);
+
+    const threadsFetcher = this._nostrFetchThreadsService;
+    const fetchThread = threadsFetcher.loadThread.bind(threadsFetcher);
+
     const relays = this._nostrRelaysService.getReadRelays();
     const pool = this._nostrRelaysService.getPool();
-    const threadLoader = this.loadThread.bind(this);
-
-    pool.trackRelays = true;
 
     this._subCloser = pool.subscribeMany(
       relays.map((relay) => relay.url),
@@ -72,21 +70,21 @@ export class NostrFetchHighlightsService {
         onclose(reasons) {
           onError?.(new Error(reasons.join('. ')))
         },
-        async onevent(evt) {
-          const relays = Array.from(pool.seenOn.get(evt.id) ?? [])
+        async onevent(event) {
+          const relays = Array.from(pool.seenOn.get(event.id) ?? [])
             .map((ar) => ar.url);
 
-          const annotation = await adapter.convertToAnnotation({ 
-            event: evt, 
+          const annotation = await adapterConvert({ 
+            event, 
             uri, 
             relays 
           });
           
           store.addAnnotations([annotation]);
 
-          // load threads
-          threadLoader({ 
-            rootEventId: evt.id, 
+          // Load threads for this highlight
+          fetchThread({ 
+            rootEventId: event.id, 
             onError 
           });
         },
@@ -97,51 +95,7 @@ export class NostrFetchHighlightsService {
     );
   }
 
-  loadThread({ 
-    rootEventId,
-    onError 
-  }: ThreadFetchOptions) {
-    const store = this._store;
-    const adapter = this._nostrHighlightAdapterService;
-    const relays = this._nostrRelaysService.getReadRelays();
-    const pool = this._nostrRelaysService.getPool();
-
-    store.annotationFetchStarted();
-
-    this._subCloser = pool.subscribeMany(
-      relays.map((relay) => relay.url),
-      [
-        {
-          kinds: [1111],
-          ['#E']: [rootEventId]
-        }
-      ],
-      {
-        onclose(reasons) {
-          onError?.(new Error(reasons.join('. ')))
-        },
-        async onevent(evt) {
-          const relays = Array.from(pool.seenOn.get(evt.id) ?? [])
-            .map((ar) => ar.url);
-
-          const annotation = await adapter.convertThread({ 
-            threadEvent: evt, 
-            rootEventId, 
-            relays 
-          });
-
-          if (annotation) {
-            store.addAnnotations([annotation]);
-          }
-        },
-        oneose() {
-          store.annotationFetchFinished();
-        },
-      }
-    );
-  }
-
-  // TODO: nostr: is there any need to close the subscription?
+  // TODO: nostr: this is not used anywhere
   close(): boolean {
     if (this._subCloser) {
       this._subCloser.close();

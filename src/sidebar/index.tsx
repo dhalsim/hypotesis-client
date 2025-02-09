@@ -34,6 +34,8 @@ import { NostrProfileService } from './services/nostr-profile';
 import { NostrRelaysService } from './services/nostr-relays';
 import { NostrSettingsService } from './services/nostr-settings';
 import { NostrPublisherService } from './services/nostr-publisher';
+import { NostrFetchThreadsService } from './services/nostr-fetch-threads';
+import { NostrThreadAdapterService } from './services/nostr-thread-adapter';
 import { createSidebarStore } from './store';
 import type { SidebarStore } from './store';
 import { disableOpenerForExternalLinks } from './util/disable-opener-for-external-links';
@@ -131,7 +133,9 @@ function startApp(settings: SidebarSettings, appEl: HTMLElement) {
     .register('nostrFetchHighlightsService', NostrFetchHighlightsService)
     .register('nostrPublisherService', NostrPublisherService)
     .register('nostrHighlightAdapterService', NostrHighlightAdapterService)
-
+    .register('nostrFetchThreadsService', NostrFetchThreadsService)
+    .register('nostrThreadAdapterService', NostrThreadAdapterService)
+    
     .register('router', RouterService)
     .register('tags', TagsService)
     .register('threadsService', ThreadsService)

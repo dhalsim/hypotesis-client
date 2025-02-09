@@ -211,7 +211,7 @@ export class AnnotationsService {
    * to the store.
    */
   async save(annotation: Annotation) {
-    let saved: Promise<SavedAnnotation>;
+    let saved: () => Promise<SavedAnnotation>;
 
     const annotationWithChanges = this._applyDraftChanges(annotation);
 
@@ -231,13 +231,13 @@ export class AnnotationsService {
           throw new Error('Parent annotation does not have an id or Nostr event');
         }
 
-        saved = this._nostrPublisherService.publishReply({
+        saved = () => this._nostrPublisherService.publishReply({
           parentAnnotation: parentAnnotation as SavedAnnotation,
           tags: annotationWithChanges.tags,
           text: annotationWithChanges.text,
         });
       } else {
-        saved = this._nostrPublisherService.publishAnnotation(annotationWithChanges);
+        saved = () => this._nostrPublisherService.publishAnnotation(annotationWithChanges);
       }      
     } else {
       throw new Error('Not implemented');
@@ -248,7 +248,7 @@ export class AnnotationsService {
     this._store.annotationSaveStarted(annotation);
     
     try {
-      savedAnnotation = await saved;
+      savedAnnotation = await saved();
     } finally {
       this._store.annotationSaveFinished(annotation);
     }
@@ -264,9 +264,7 @@ export class AnnotationsService {
 
     // Clear out any pending changes (draft)
     this._store.removeDraft(annotation);
-
-    // Add (or, in effect, update) the annotation to the store's collection
-    this._store.addAnnotations([savedAnnotation]);
+    this._store.removeAnnotations([annotation]);
     
     return savedAnnotation;
   }

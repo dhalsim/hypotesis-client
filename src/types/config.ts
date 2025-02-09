@@ -31,14 +31,6 @@ export type Service = {
 };
 
 /**
- * Configuration for the Sentry crash-reporting service.
- */
-export type SentryConfig = {
-  dsn: string;
-  environment: string;
-};
-
-/**
  * Configuration for the sidebar app set by the Hypothesis backend ("h")
  * or baked into the sidebar app at build time (in the browser extension).
  *

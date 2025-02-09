@@ -10,6 +10,7 @@ export class NostrRelaysService {
 
   constructor() {
     this._pool = new SimplePool();
+    this._pool.trackRelays = true;
 
     this._readRelays = [
       new Relay('ws://localhost:10547'),

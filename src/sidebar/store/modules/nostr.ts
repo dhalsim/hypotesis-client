@@ -18,7 +18,6 @@ export type NostrState = {
   nostrProfileUrl: string;
   nostrSearchUrl: string;
   nostrEventUrl: string;
-  openHelpPanel: boolean;
 };
 
 const initialState: NostrState = {
@@ -29,7 +28,6 @@ const initialState: NostrState = {
   nostrProfileUrl: 'https://njump.me',
   nostrSearchUrl: 'https://nostr.band/?q=',
   nostrEventUrl: 'https://njump.me',
-  openHelpPanel: true,
 };
 
 const reducers = {
@@ -72,9 +70,6 @@ const reducers = {
   SET_NOSTR_PROFILE_URL(state: NostrState, action: { nostrProfileUrl: string }) {
     return { ...state, nostrProfileUrl: action.nostrProfileUrl };
   },
-  SET_OPEN_HELP_PANEL(state: NostrState, action: { openHelpPanel: boolean }) {
-    return { ...state, openHelpPanel: action.openHelpPanel };
-  },
 };
 
 function setPrivateKey(privateKey: Uint8Array | null) {
@@ -95,10 +90,6 @@ function setNostrProfile(profile: NostrProfile | null) {
 
 function setProfileLoading(loading: boolean) {
   return makeAction(reducers, 'SET_PROFILE_LOADING', { loading });
-}
-
-function setOpenHelpPanel(openHelpPanel: boolean) {
-  return makeAction(reducers, 'SET_OPEN_HELP_PANEL', { openHelpPanel });
 }
 
 function getPublicKeyHex(state: NostrState) {
@@ -137,9 +128,6 @@ function getNostrEventUrl(state: NostrState) {
   return state.nostrEventUrl;
 }
 
-function getOpenHelpPanel(state: NostrState) {
-  return state.openHelpPanel;
-}
 
 export const nostrModule = createStoreModule(initialState, {
   namespace: 'nostr',
@@ -150,7 +138,6 @@ export const nostrModule = createStoreModule(initialState, {
     setConnectMode,
     setNostrProfile,
     setProfileLoading,
-    setOpenHelpPanel,
   },
   selectors: {
     getPrivateKey,
@@ -162,6 +149,5 @@ export const nostrModule = createStoreModule(initialState, {
     getNostrProfileUrl,
     getNostrEventUrl,
     getNostrSearchUrl,
-    getOpenHelpPanel,
   },
 });

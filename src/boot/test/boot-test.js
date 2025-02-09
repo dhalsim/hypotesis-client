@@ -25,12 +25,8 @@ describe('bootstrap', () => {
       'styles/pdfjs-overrides.css',
 
       // Sidebar app
-      'scripts/sentry.bundle.js',
-      'scripts/katex.bundle.js',
-      'scripts/showdown.bundle.js',
       'scripts/sidebar.bundle.js',
 
-      'styles/katex.min.css',
       'styles/sidebar.css',
     ];
 

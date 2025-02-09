@@ -97,3 +97,29 @@ export function nostrDisplayName(
 
   return npub;
 }
+
+export function normalizeUrl(url: string) {
+  try {
+    // Parse the URL
+    const parsedUrl = new URL(url);
+
+    // Convert scheme and hostname to lowercase
+    parsedUrl.protocol = parsedUrl.protocol.toLowerCase();
+    parsedUrl.hostname = parsedUrl.hostname.toLowerCase();
+
+    // Remove the default port
+    if ((parsedUrl.protocol === 'http:' && parsedUrl.port === '80') || 
+        (parsedUrl.protocol === 'https:' && parsedUrl.port === '443')) {
+      parsedUrl.port = '';
+    }
+
+    parsedUrl.hash = '';
+
+    // Return the normalized URL
+    return parsedUrl.toString();
+  } catch (error) {
+    console.error('Invalid URL:', error.message);
+    
+    return null;
+  }
+}

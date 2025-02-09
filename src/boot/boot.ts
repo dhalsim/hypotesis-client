@@ -188,7 +188,7 @@ export function bootSidebarApp(doc: Document, config: SidebarAppConfig) {
     injectScript(doc, url, { esModule: true });
   }
 
-  const styles = ['styles/katex.min.css', 'styles/sidebar.css'];
+  const styles = ['styles/sidebar.css'];
   for (const path of styles) {
     const url = assetURL(config, path);
     injectStylesheet(doc, url);

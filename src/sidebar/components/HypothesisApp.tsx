@@ -3,7 +3,6 @@ import classnames from 'classnames';
 import { useEffect, useMemo } from 'preact/hooks';
 
 import type { SidebarSettings } from '../../types/config';
-import { shouldAutoDisplayTutorial } from '../helpers/session';
 import { applyTheme } from '../helpers/theme';
 import { withServices } from '../service-context';
 import type { FrameSyncService } from '../services/frame-sync';
@@ -55,7 +54,7 @@ function HypothesisApp({
 
   useEffect(() => {
     // TODO: nostr: when to open the help panel? it used to check the profile and some settings
-    if (shouldAutoDisplayTutorial(isSidebar)) {
+    if (localStorage.getItem('openHelpPanel') !== 'false') {
       store.openSidebarPanel('help');
     }
   }, [isSidebar, store]);

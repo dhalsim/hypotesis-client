@@ -11,14 +11,32 @@ export type TextViewProps = {
 };
 
 /**
- * A component which renders plain text content and replaces recognized links
- * with embedded video/audio.
+ * Convert URLs in text to clickable links
+ */
+function linkifyText(text: string): Node[] {
+  const urlPattern = /(?:(?:http|https):\/\/|www\.)[^\s]+/gi;
+  const html = text.replaceAll(urlPattern, url => {
+    const href = url.startsWith('www.') ? `https://${url}` : url;
+    
+    return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="text-brand hover:text-brand-hover">${url}</a>`;
+  });
+  
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  return Array.from(doc.body.childNodes);
+}
+
+/**
+ * A component which renders plain text content, converts URLs to clickable links,
+ * and replaces recognized media links with embedded video/audio.
  */
 export default function TextView({ text, classes, style }: TextViewProps) {
   const content = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (content.current) {
+      content.current.replaceChildren(...linkifyText(text));
+      
       replaceLinksWithEmbeds(content.current, {
         // Make embeds the full width of the sidebar, unless the sidebar has been
         // made wider than the `md` breakpoint. In that case, restrict width
@@ -35,9 +53,7 @@ export default function TextView({ text, classes, style }: TextViewProps) {
         className={classes} 
         data-testid="text-content" 
         style={style}
-      >
-        {text}
-      </div>
+      />
     </div>
   );
 }

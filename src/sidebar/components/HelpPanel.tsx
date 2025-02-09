@@ -1,10 +1,12 @@
+import classnames from 'classnames';
 import { Card, Link, Tab } from '@hypothesis/frontend-shared';
 import { ExternalIcon } from '@hypothesis/frontend-shared';
-import classnames from 'classnames';
 import { useCallback, useId, useMemo, useState } from 'preact/hooks';
 
 import { VersionData } from '../helpers/version-data';
 import { useSidebarStore } from '../store';
+import { useService } from '../service-context';
+import type { LocalStorageService } from '../services/local-storage';
 
 import SidebarPanel from './SidebarPanel';
 import Tutorial from './Tutorial';
@@ -45,6 +47,7 @@ type PanelKey = 'tutorial' | 'versionInfo';
  */
 export default function HelpPanel() {
   const store = useSidebarStore();
+  const localStorage = useService('localStorage') as LocalStorageService;
   const frames = store.frames();
   const mainFrame = store.mainFrame();
   const profile = store.getNostrProfile();
@@ -58,7 +61,7 @@ export default function HelpPanel() {
   // auto-open triggering of this panel is owned by the `HypothesisApp` component.
   // This reference is such that we know whether we should "dismiss" the tutorial
   // (permanently for this user) when it is closed.
-  const hasAutoDisplayPreference = store.getOpenHelpPanel();
+  const hasAutoDisplayPreference = localStorage.getItem('openHelpPanel') !== 'false';
 
   // The "Tutorial" (getting started) subpanel is the default panel shown
   const [activeSubPanel, setActiveSubPanel] = useState<PanelKey>('tutorial');
@@ -85,7 +88,8 @@ export default function HelpPanel() {
 
   // The support ticket URL encodes some version info in it to pre-fill in the
   // create-new-ticket form
-  const supportTicketURL = `https://web.hypothes.is/get-help/?sys_info=${versionData.asEncodedURLString()}`;
+  const supportTicketURL = 
+  `https://web.hypothes.is/get-help/?sys_info=${versionData.asEncodedURLString()}`;
 
   const onActiveChanged = useCallback(
     (active: boolean) => {
@@ -93,10 +97,10 @@ export default function HelpPanel() {
         // If the tutorial is currently being auto-displayed, update the user
         // preference to disable the auto-display from happening on subsequent
         // app launches
-        store.setOpenHelpPanel(false);
+        localStorage.setItem('openHelpPanel', 'false');
       }
     },
-    [store, hasAutoDisplayPreference],
+    [hasAutoDisplayPreference, localStorage],
   );
 
   return (
