@@ -2,8 +2,7 @@ import { kinds } from "nostr-tools";
 import type { NostrEvent, EventTemplate } from "nostr-tools";
 
 import { generateHexString } from '../../shared/random';
-
-import { nostrEventUrl } from "../helpers/nostr";
+import type { SidebarSettings } from "../../types/config";
 import type { 
   RangeSelector, 
   Annotation,
@@ -12,8 +11,9 @@ import type {
   TextPositionSelector, 
   TextQuoteSelector 
 } from "../../types/api";
+
+import { getHashtags, nostrEventUrl } from "../helpers/nostr";
 import type { SidebarStore } from "../store";
-import type { SidebarSettings } from "../../types/config";
 
 import type { NostrProfileService } from "./nostr-profile";
 
@@ -46,7 +46,7 @@ export class NostrHighlightAdapterService {
     this._currentUserId = store.getPublicKeyHex();
   }
 
-  async convertToEvent(annotation: Annotation): Promise<EventTemplate> {
+  convertToEvent(annotation: Annotation): EventTemplate {
     if (!annotation.target[0].selector) {
       throw new Error('No selector found');
     }
@@ -233,10 +233,4 @@ function getDocumentTitle(uri: string) {
   }
 
   return domain;
-}
-
-function getHashtags(event: NostrEvent) {
-  return event.tags.filter(tag => tag[0] === 't')
-    .map(tag => tag[1] || '')
-    .filter(tag => tag !== '');
 }

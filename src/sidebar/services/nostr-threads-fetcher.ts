@@ -17,7 +17,7 @@ type ThreadFetchOptions = {
 /**
  * @inject
  */
-export class NostrFetchThreadsService {
+export class NostrThreadsFetcherService {
   private _nostrRelaysService: NostrRelaysService;
   private _nostrThreadAdapterService: NostrThreadAdapterService;
   private _store: SidebarStore;

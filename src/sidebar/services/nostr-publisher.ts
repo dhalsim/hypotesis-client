@@ -1,14 +1,15 @@
-import { finalizeEvent, type VerifiedEvent } from 'nostr-tools';
-
+import { generateHexString } from '../../shared/random';
 import type { Annotation, SavedAnnotation } from "../../types/api";
+import type { SidebarSettings } from '../../types/config';
+
+import { nostrEventUrl } from '../helpers/nostr';
 import type { SidebarStore } from '../store';
 
-import { generateHexString } from '../../shared/random';
-import { nostrEventUrl } from '../helpers/nostr';
 import type { NostrRelaysService } from './nostr-relays';
 import type { NostrHighlightAdapterService } from './nostr-highlight-adapter';
 import type { NostrThreadAdapterService } from './nostr-thread-adapter';
-import type { SidebarSettings } from '../../types/config';
+import type { NostrPageNotesAdapterService } from './nostr-page-comments-adapter';
+import type { NostrSignerService } from './nostr-signer';
 
 export type HighlightsFetchOptions = {
   uri: string;
@@ -31,9 +32,8 @@ export type ThreadFetchOptions = {
 };
 
 type PublishReplyOptions = {
+  annotation: Annotation;
   parentAnnotation: SavedAnnotation;
-  tags: string[];
-  text: string;
 };
 
 /**
@@ -44,6 +44,8 @@ export class NostrPublisherService {
   private _nostrRelaysService: NostrRelaysService;
   private _nostrHighlightAdapterService: NostrHighlightAdapterService;
   private _nostrThreadAdapterService: NostrThreadAdapterService;
+  private _nostrPageNotesAdapterService: NostrPageNotesAdapterService;
+  private _nostrSignerService: NostrSignerService;
   private _store: SidebarStore;
 
   constructor(
@@ -51,40 +53,30 @@ export class NostrPublisherService {
     nostrRelaysService: NostrRelaysService,
     nostrHighlightAdapterService: NostrHighlightAdapterService,
     nostrThreadAdapterService: NostrThreadAdapterService,
+    nostrPageNotesAdapterService: NostrPageNotesAdapterService,
+    nostrSignerService: NostrSignerService,
     store: SidebarStore
   ) {
     this._settings = settings;
     this._nostrRelaysService = nostrRelaysService;
     this._nostrHighlightAdapterService = nostrHighlightAdapterService;
     this._nostrThreadAdapterService = nostrThreadAdapterService;
+    this._nostrPageNotesAdapterService = nostrPageNotesAdapterService;
+    this._nostrSignerService = nostrSignerService;
     this._store = store;
   }
 
   async publishAnnotation(annotation: Annotation): Promise<SavedAnnotation> {
-    const event = await this._nostrHighlightAdapterService.convertToEvent(annotation);
+    const event = this._nostrHighlightAdapterService.convertToEvent(annotation);
     
     const relays = this._nostrRelaysService.getWriteRelays();
     const pool = this._nostrRelaysService.getPool();
 
-    const connectMode = this._store.getConnectMode();
-
-    let finalizedEvent: VerifiedEvent;
-
-    if (connectMode === 'nsec') {
-      const secretKey = this._store.getPrivateKey();
-  
-      if (!secretKey) {
-        throw new Error('No private key found');
-      }
-  
-      finalizedEvent = finalizeEvent(event, secretKey);
-    } else {
-      throw new Error('Not implemented');
-    }
+    const signedEvent = this._nostrSignerService.signEvent(event);
 
     // check if any relay is successful
     const results = await Promise.allSettled(
-      pool.publish(relays.map(r => r.url), finalizedEvent)
+      pool.publish(relays.map(r => r.url), signedEvent)
     );
 
     if (results.every(r => r.status === 'rejected')) {
@@ -93,43 +85,28 @@ export class NostrPublisherService {
 
     return {
       ...annotation,
-      nostr_event: finalizedEvent,
-      id: finalizedEvent.id,
+      nostr_event: signedEvent,
+      id: signedEvent.id,
     }
   }
 
-  async publishReply({ 
-    parentAnnotation, 
-    tags,
-    text
+  async publishAnnotationReply({ 
+    annotation,
+    parentAnnotation
   }: PublishReplyOptions): Promise<SavedAnnotation> {
     const event = await this._nostrThreadAdapterService.convertToReplyEvent({
       parentAnnotation,
-      tags,
-      text
+      annotation,
     });
 
     const relays = this._nostrRelaysService.getWriteRelays();
     const pool = this._nostrRelaysService.getPool();
 
-    const connectMode = this._store.getConnectMode();
+    const signedEvent = this._nostrSignerService.signEvent(event);
 
-    let finalizedEvent: VerifiedEvent;
-
-    if (connectMode === 'nsec') {
-      const secretKey = this._store.getPrivateKey();
-  
-      if (!secretKey) {
-        throw new Error('No private key found');
-      }
-  
-      finalizedEvent = finalizeEvent(event, secretKey);
-    } else {
-      throw new Error('Not implemented');
-    }
     // check if any relay is successful
     const results = await Promise.allSettled(
-      pool.publish(relays.map(r => r.url), finalizedEvent)
+      pool.publish(relays.map(r => r.url), signedEvent)
     );
 
     if (results.every(r => r.status === 'rejected')) {
@@ -147,7 +124,7 @@ export class NostrPublisherService {
       $cluster: 'user-annotations',
       $tag: 'a:' + generateHexString(8),
 
-      id: finalizedEvent.id,
+      id: signedEvent.id,
       created: new Date(event.created_at * 1000).toISOString(),
       updated: new Date(event.created_at * 1000).toISOString(),
       document: {
@@ -159,18 +136,18 @@ export class NostrPublisherService {
         html: nostrEventUrl({ 
           settings: this._settings, 
           store: this._store, 
-          event: finalizedEvent, 
+          event: signedEvent, 
           relays: relays.map(r => r.url)
         })
       },
       // TODO: nostr: check Reports
       flagged: false,
-      user: finalizedEvent.pubkey,
+      user: signedEvent.pubkey,
       user_info: {
         display_name: profile.displayName || null
       },
-      tags,
-      text,
+      tags: annotation.tags,
+      text: annotation.text,
       uri: parentAnnotation.uri,
       permissions: {
         read: ['group:__world__'],
@@ -183,7 +160,61 @@ export class NostrPublisherService {
         },
       ],
       references: [...(parentAnnotation.references || []), parentAnnotation.id],
-      nostr_event: finalizedEvent,
+      nostr_event: signedEvent,
     };
+  }
+
+  async publishPageNote(annotation: Annotation): Promise<SavedAnnotation> {
+    const event = this._nostrPageNotesAdapterService.convertToEvent(annotation);
+
+    const relays = this._nostrRelaysService.getWriteRelays();
+    const pool = this._nostrRelaysService.getPool();
+
+    const signedEvent = this._nostrSignerService.signEvent(event);
+
+    // check if any relay is successful
+    const results = await Promise.allSettled(
+      pool.publish(relays.map(r => r.url), signedEvent)
+    );
+
+    if (results.every(r => r.status === 'rejected')) {
+      throw new Error('Failed to publish page note');
+    }
+
+    return {
+      ...annotation,
+      nostr_event: signedEvent,
+      id: signedEvent.id,
+    }
+  }
+
+  async publishPageNoteReply({
+    parentAnnotation,
+    annotation
+  }: PublishReplyOptions): Promise<SavedAnnotation> {
+    const event = this._nostrPageNotesAdapterService.convertToReplyEvent({
+      annotation,
+      parentAnnotation,
+    });
+
+    const relays = this._nostrRelaysService.getWriteRelays();
+    const pool = this._nostrRelaysService.getPool();
+
+    const signedEvent = this._nostrSignerService.signEvent(event);
+
+    // check if any relay is successful
+    const results = await Promise.allSettled(
+      pool.publish(relays.map(r => r.url), signedEvent)
+    );
+
+    if (results.every(r => r.status === 'rejected')) {
+      throw new Error('Failed to publish page note reply');
+    }
+
+    return {
+      ...annotation,
+      nostr_event: signedEvent,
+      id: signedEvent.id,
+    }
   }
 }

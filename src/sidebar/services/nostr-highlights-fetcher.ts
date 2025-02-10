@@ -5,7 +5,7 @@ import type { SidebarStore } from '../store';
 
 import type { NostrRelaysService } from './nostr-relays';
 import type { NostrHighlightAdapterService } from './nostr-highlight-adapter';
-import type { NostrFetchThreadsService } from './nostr-fetch-threads';
+import type { NostrThreadsFetcherService } from './nostr-threads-fetcher';
 
 type HighlightsFetchOptions = {
   /**
@@ -22,22 +22,22 @@ type HighlightsFetchOptions = {
 /**
  * @inject
  */
-export class NostrFetchHighlightsService {
+export class NostrHighlightsFetcherService {
   private _nostrRelaysService: NostrRelaysService;
   private _nostrHighlightAdapterService: NostrHighlightAdapterService;
-  private _nostrFetchThreadsService: NostrFetchThreadsService;
+  private _nostrThreadsFetcherService: NostrThreadsFetcherService;
   private _store: SidebarStore;
   private _subCloser: SubCloser | null = null;
 
   constructor(
     nostrRelaysService: NostrRelaysService,
     nostrHighlightAdapterService: NostrHighlightAdapterService,
-    nostrFetchThreadsService: NostrFetchThreadsService,
+    nostrThreadsFetcherService: NostrThreadsFetcherService,
     store: SidebarStore
   ) {
     this._nostrRelaysService = nostrRelaysService;
     this._nostrHighlightAdapterService = nostrHighlightAdapterService;
-    this._nostrFetchThreadsService = nostrFetchThreadsService;
+    this._nostrThreadsFetcherService = nostrThreadsFetcherService;
     this._store = store;
   }
 
@@ -52,9 +52,10 @@ export class NostrFetchHighlightsService {
     const adapter = this._nostrHighlightAdapterService;
     const adapterConvert = adapter.convertToAnnotation.bind(adapter);
 
-    const threadsFetcher = this._nostrFetchThreadsService;
-    const fetchThread = threadsFetcher.loadThread.bind(threadsFetcher);
-
+    const fetchThread = this._nostrThreadsFetcherService.loadThread.bind(
+      this._nostrThreadsFetcherService
+    );
+    
     const relays = this._nostrRelaysService.getReadRelays();
     const pool = this._nostrRelaysService.getPool();
 

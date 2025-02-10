@@ -2,9 +2,9 @@ import { kinds } from "nostr-tools";
 import type { EventTemplate, NostrEvent } from "nostr-tools";
 
 import { generateHexString } from '../../shared/random';
-import { nostrEventUrl, retryWithBackoff } from "../helpers/nostr";
-import type { SavedAnnotation } from "../../types/api";
+import type { Annotation, SavedAnnotation } from "../../types/api";
 
+import { getHashtags, nostrEventUrl, retryWithBackoff } from "../helpers/nostr";
 import type { SidebarStore } from "../store";
 import type { SidebarSettings } from "../../types/config";
 import type { NostrProfileService } from "./nostr-profile";
@@ -15,9 +15,8 @@ type ConvertThreadOptions = {
 };
 
 type ConvertToReplyEventOptions = {
+  annotation: Annotation;
   parentAnnotation: SavedAnnotation;
-  tags: string[];
-  text: string;
 };
 
 type MergeReferencesOptions = {
@@ -46,9 +45,8 @@ export class NostrThreadAdapterService {
   }
 
   async convertToReplyEvent({
+    annotation,
     parentAnnotation,
-    tags,
-    text
   }: ConvertToReplyEventOptions): Promise<EventTemplate> {
     const parentAnnotationId = parentAnnotation.id;
 
@@ -63,9 +61,26 @@ export class NostrThreadAdapterService {
     let parentTags: string[][] = [];
 
     if (rootAnnotationId) {
-      const rootAnnotation = await this._store.findAnnotationByID(rootAnnotationId);
+      const rootAnnotation = await retryWithBackoff(
+        async (retryCount: number, maxRetries: number) => {
+          const rootAnnotation = this._store.findAnnotationByID(rootAnnotationId);
+          
+          if (!rootAnnotation) {
+            // eslint-disable-next-line no-console
+            console.info(`
+              No root annotation found for event: ${parentAnnotationId}, 
+              rootAnnotationId: ${rootAnnotationId}, 
+              attempt ${retryCount + 1}/${maxRetries}
+            `);
+            
+            throw new Error('Root annotation not found');
+          }
       
-      if (!rootAnnotation?.nostr_event) {
+          return rootAnnotation;
+        }
+      );
+
+      if (!rootAnnotation) {
         throw new Error('Root annotation not found or missing Nostr event');
       }
 
@@ -112,9 +127,9 @@ export class NostrThreadAdapterService {
     return {
       kind: 1111,
       created_at: Math.floor(Date.now() / 1000),
-      content: text,
+      content: annotation.text,
       tags: [
-        ...tags.map(tag => ['t', tag]),
+        ...annotation.tags.map(tag => ['t', tag]),
         ...rootTags,
         ...parentTags,
       ],
@@ -131,7 +146,7 @@ export class NostrThreadAdapterService {
       return null;
     }
 
-    const rootAnnotation = await this._store.findAnnotationByID(rootEventId);
+    const rootAnnotation = this._store.findAnnotationByID(rootEventId);
     
     if (!rootAnnotation) {
       console.warn(
@@ -208,14 +223,15 @@ export class NostrThreadAdapterService {
     }
     
     const parentAnnotation = await retryWithBackoff(
-      async (retryCount: number) => {
+      async (retryCount: number, maxRetries: number) => {
         const parentAnnotation = this._store.findAnnotationByID(parentAnnotationId);
         
         if (!parentAnnotation) {
-          console.warn(`
+          // eslint-disable-next-line no-console
+          console.info(`
             No thread annotation found for event: ${event.id}, 
             threadReferenceId: ${parentAnnotationId},
-            attempt ${retryCount + 1}/3
+            attempt ${retryCount + 1}/${maxRetries}
           `);
           
           throw new Error('Thread annotation not found');
@@ -234,10 +250,4 @@ export class NostrThreadAdapterService {
       parentAnnotationId
     ];
   }
-}
-
-function getHashtags(event: NostrEvent) {
-  return event.tags.filter(tag => tag[0] === 't')
-    .map(tag => tag[1] || '')
-    .filter(tag => tag !== '');
 }

@@ -29,16 +29,19 @@ import { TagsService } from './services/tags';
 import { ThreadsService } from './services/threads';
 import { ToastMessengerService } from './services/toast-messenger';
 import { NostrHighlightAdapterService } from './services/nostr-highlight-adapter';
-import { NostrFetchHighlightsService } from './services/nostr-fetch-highlights';
+import { NostrHighlightsFetcherService } from './services/nostr-highlights-fetcher';
 import { NostrProfileService } from './services/nostr-profile';
 import { NostrRelaysService } from './services/nostr-relays';
 import { NostrSettingsService } from './services/nostr-settings';
 import { NostrPublisherService } from './services/nostr-publisher';
-import { NostrFetchThreadsService } from './services/nostr-fetch-threads';
+import { NostrThreadsFetcherService } from './services/nostr-threads-fetcher';
+import { NostrPageNotesFetcherService } from './services/nostr-page-comments-fetcher';
+import { NostrPageNotesAdapterService } from './services/nostr-page-comments-adapter';
 import { NostrThreadAdapterService } from './services/nostr-thread-adapter';
+import { NostrSignerService } from './services/nostr-signer';
 import { createSidebarStore } from './store';
-import type { SidebarStore } from './store';
 import { disableOpenerForExternalLinks } from './util/disable-opener-for-external-links';
+import type { SidebarStore } from './store';
 
 // Read settings rendered into sidebar app HTML by service/extension.
 const configFromSidebar = parseJsonConfig(document) as ConfigFromSidebar;
@@ -49,7 +52,9 @@ const configFromSidebar = parseJsonConfig(document) as ConfigFromSidebar;
 // and continue anyway.
 const envOk = checkEnvironment(window);
 
-console.warn('envOk', envOk);
+if (!envOk) {
+  console.warn('envOk', envOk);
+}
 
 // Prevent tab-jacking.
 disableOpenerForExternalLinks(document.body);
@@ -130,12 +135,15 @@ function startApp(settings: SidebarSettings, appEl: HTMLElement) {
     .register('nostrRelaysService', NostrRelaysService)
     .register('nostrProfileService', NostrProfileService)
     .register('nostrSettingsService', NostrSettingsService)
-    .register('nostrFetchHighlightsService', NostrFetchHighlightsService)
+    .register('nostrHighlightsFetcherService', NostrHighlightsFetcherService)
     .register('nostrPublisherService', NostrPublisherService)
     .register('nostrHighlightAdapterService', NostrHighlightAdapterService)
-    .register('nostrFetchThreadsService', NostrFetchThreadsService)
+    .register('nostrThreadsFetcherService', NostrThreadsFetcherService)
     .register('nostrThreadAdapterService', NostrThreadAdapterService)
-    
+    .register('nostrPageNotesFetcherService', NostrPageNotesFetcherService)
+    .register('nostrPageNotesAdapterService', NostrPageNotesAdapterService)
+    .register('nostrSignerService', NostrSignerService)
+
     .register('router', RouterService)
     .register('tags', TagsService)
     .register('threadsService', ThreadsService)

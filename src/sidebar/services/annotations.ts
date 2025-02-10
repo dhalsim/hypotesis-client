@@ -211,36 +211,46 @@ export class AnnotationsService {
    * to the store.
    */
   async save(annotation: Annotation) {
+    if (metadata.isSaved(annotation)) {
+      throw new Error('Cannot save saved annotation');
+    }
+    
     let saved: () => Promise<SavedAnnotation>;
-
+    
     const annotationWithChanges = this._applyDraftChanges(annotation);
 
-    if (!metadata.isSaved(annotation)) {
-      // saved = this._api.annotation.create({}, annotationWithChanges);
+    if (metadata.isReply(annotation)) {
+      const parentAnnotation = this._store.findAnnotationByID(
+        annotation.references?.[annotation.references.length - 1] as string
+      );
 
-      if (metadata.isReply(annotation)) {
-        const parentAnnotation = this._store.findAnnotationByID(
-          annotation.references?.[annotation.references.length - 1] as string
-        );
+      if (!parentAnnotation) {
+        throw new Error('Parent annotation not found');
+      }
 
-        if (!parentAnnotation) {
-          throw new Error('Parent annotation not found');
-        }
+      const rootAnnotation = this._store.findAnnotationByID(
+        annotation.references?.[0] as string
+      );
 
-        if (!(parentAnnotation.id && parentAnnotation.nostr_event)) {
-          throw new Error('Parent annotation does not have an id or Nostr event');
-        }
+      if (!rootAnnotation) {
+        throw new Error('Root annotation not found');
+      }
 
-        saved = () => this._nostrPublisherService.publishReply({
-          parentAnnotation: parentAnnotation as SavedAnnotation,
-          tags: annotationWithChanges.tags,
-          text: annotationWithChanges.text,
-        });
-      } else {
-        saved = () => this._nostrPublisherService.publishAnnotation(annotationWithChanges);
-      }      
+      const isRootPageNote = metadata.isPageNote(rootAnnotation);
+
+      saved = isRootPageNote
+        ? () => this._nostrPublisherService.publishPageNoteReply({
+            parentAnnotation,
+            annotation: annotationWithChanges,
+          })
+        : () => this._nostrPublisherService.publishAnnotationReply({
+            parentAnnotation,
+            annotation: annotationWithChanges,
+          });
     } else {
-      throw new Error('Not implemented');
+      saved = metadata.isPageNote(annotation)
+        ? () => this._nostrPublisherService.publishPageNote(annotationWithChanges)
+        : () => this._nostrPublisherService.publishAnnotation(annotationWithChanges);
     }
 
     let savedAnnotation: SavedAnnotation;

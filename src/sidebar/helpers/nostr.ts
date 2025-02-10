@@ -1,5 +1,5 @@
 import { nip19 } from "nostr-tools";
-import type { Event } from "nostr-tools";
+import type { Event, NostrEvent } from "nostr-tools";
 
 import type { SidebarSettings } from "../../types/config";
 import type { SidebarStore } from "../store";
@@ -54,7 +54,7 @@ export function nostrSearchUrl({ settings, store, searchTerm, tag }: NostrSearch
 }
 
 export async function retryWithBackoff<T>(
-  operation: (retryCount: number) => Promise<T>,
+  operation: (retryCount: number, maxRetries: number) => Promise<T>,
   maxRetries: number = 5,
   initialDelay: number = 200
 ): Promise<T> {
@@ -62,7 +62,7 @@ export async function retryWithBackoff<T>(
   
   while (retryCount < maxRetries) {
     try {
-      return await operation(retryCount);
+      return await operation(retryCount, maxRetries);
     } catch (error) {
       retryCount++;
       
@@ -98,7 +98,14 @@ export function nostrDisplayName(
   return npub;
 }
 
-export function normalizeUrl(url: string) {
+export function getHashtags(event: NostrEvent) {
+  return event.tags.filter(tag => tag[0] === 't')
+    .map(tag => tag[1] || '')
+    .filter(tag => tag !== '');
+}
+
+
+export function normalizeUrl(url: string): [string, string] {
   try {
     // Parse the URL
     const parsedUrl = new URL(url);
@@ -116,10 +123,10 @@ export function normalizeUrl(url: string) {
     parsedUrl.hash = '';
 
     // Return the normalized URL
-    return parsedUrl.toString();
+    return [parsedUrl.toString(), parsedUrl.protocol.replace(':', '')];
   } catch (error) {
     console.error('Invalid URL:', error.message);
     
-    return null;
+    return [url, ''];
   }
 }

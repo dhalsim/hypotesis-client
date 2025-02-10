@@ -102,6 +102,7 @@ function Annotation({
   const annotationDescription = isSaved(annotation)
     ? annotationRole(annotation)
     : `New ${annotationRole(annotation).toLowerCase()}`;
+  
   const state = store.isAnnotationHighlighted(annotation)
     ? ' - Highlighted'
     : '';

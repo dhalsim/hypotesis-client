@@ -18,6 +18,15 @@ export default [
   },
 
   ...hypothesisBase,
+
+  // Add this configuration to override the new-cap rule
+  {
+    files: ['src/**/*.{js,ts,tsx}'],
+    rules: {
+      'new-cap': 'off',
+    },
+  },
+
   ...hypothesisJSX,
   ...hypothesisTS,
 

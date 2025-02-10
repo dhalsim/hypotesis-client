@@ -4,7 +4,8 @@ import { tabForAnnotation } from '../helpers/tabs';
 import { withServices } from '../service-context';
 import { useSidebarStore } from '../store';
 import type { FrameSyncService } from '../services/frame-sync';
-import type { NostrFetchHighlightsService } from '../services/nostr-fetch-highlights';
+import type { NostrHighlightsFetcherService } from '../services/nostr-highlights-fetcher';
+import type { NostrPageNotesFetcherService } from '../services/nostr-page-comments-fetcher';
 
 import SidebarContentError from './SidebarContentError';
 import SidebarTabs from './SidebarTabs';
@@ -15,7 +16,8 @@ export type SidebarViewProps = {
 
   // injected
   frameSync: FrameSyncService;
-  nostrFetchHighlightsService: NostrFetchHighlightsService;
+  nostrHighlightsFetcherService: NostrHighlightsFetcherService;
+  nostrPageNotesFetcherService: NostrPageNotesFetcherService;
 };
 
 /**
@@ -24,7 +26,8 @@ export type SidebarViewProps = {
 function SidebarView({
   frameSync,
   onLogin,
-  nostrFetchHighlightsService
+  nostrHighlightsFetcherService,
+  nostrPageNotesFetcherService
 }: SidebarViewProps) {
   // Store state values
   const store = useSidebarStore();
@@ -97,17 +100,35 @@ function SidebarView({
       }
       prevGroupId.current = focusedGroupId;
     }
+
+    // it takes time to load searchUris
+    const uri = searchUris[0];
     
-    if (focusedGroupId && searchUris.length) {
-      nostrFetchHighlightsService.loadByUri({
-        uri: searchUris[0],
+    if (focusedGroupId && uri) {
+      nostrHighlightsFetcherService.loadByUri({
+        uri,
+        onError: (error) => { 
+          // eslint-disable-next-line no-console
+          console.log(error); 
+        }
+      });
+
+      nostrPageNotesFetcherService.loadPageNotes({
+        uri,
         onError: (error) => { 
           // eslint-disable-next-line no-console
           console.log(error); 
         }
       });
     }
-  }, [store, nostrFetchHighlightsService, focusedGroupId, userId, searchUris]);
+  }, [
+    store, 
+    nostrHighlightsFetcherService, 
+    nostrPageNotesFetcherService, 
+    focusedGroupId, 
+    userId, 
+    searchUris
+  ]);
 
   // When a `linkedAnnotationAnchorTag` becomes available, scroll to it
   // and focus it
@@ -145,5 +166,6 @@ function SidebarView({
 
 export default withServices(SidebarView, [
   'frameSync',
-  'nostrFetchHighlightsService',
+  'nostrHighlightsFetcherService',
+  'nostrPageNotesFetcherService',
 ]);
