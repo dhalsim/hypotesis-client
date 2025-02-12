@@ -11,7 +11,7 @@ import type { ToastMessengerService } from '../services/toast-messenger';
 import { useSidebarStore } from '../store';
 import AnnotationView from './AnnotationView';
 import HelpPanel from './HelpPanel';
-import NostrConnectPanel from './NostrConnectPanel';
+import NostrConnectPanel from './NostrConnect';
 import NotebookView from './NotebookView';
 import ProfileView from './ProfileView';
 import ShareDialog from './ShareDialog';
@@ -92,7 +92,8 @@ function HypothesisApp({
 
     store.removeAnnotations(store.unsavedAnnotations());
     store.discardAllDrafts();
-    nostrSettingsService.setPrivateKey(null);
+    
+    nostrSettingsService.clearPrivateKeyAndBunkerUrl();
   };
 
   return (

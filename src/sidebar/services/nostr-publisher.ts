@@ -72,7 +72,7 @@ export class NostrPublisherService {
     const relays = this._nostrRelaysService.getWriteRelays();
     const pool = this._nostrRelaysService.getPool();
 
-    const signedEvent = this._nostrSignerService.signEvent(event);
+    const signedEvent = await this._nostrSignerService.signEvent(event);
 
     // check if any relay is successful
     const results = await Promise.allSettled(
@@ -102,7 +102,7 @@ export class NostrPublisherService {
     const relays = this._nostrRelaysService.getWriteRelays();
     const pool = this._nostrRelaysService.getPool();
 
-    const signedEvent = this._nostrSignerService.signEvent(event);
+    const signedEvent = await this._nostrSignerService.signEvent(event);
 
     // check if any relay is successful
     const results = await Promise.allSettled(
@@ -170,7 +170,7 @@ export class NostrPublisherService {
     const relays = this._nostrRelaysService.getWriteRelays();
     const pool = this._nostrRelaysService.getPool();
 
-    const signedEvent = this._nostrSignerService.signEvent(event);
+    const signedEvent = await this._nostrSignerService.signEvent(event);
 
     // check if any relay is successful
     const results = await Promise.allSettled(
@@ -200,7 +200,7 @@ export class NostrPublisherService {
     const relays = this._nostrRelaysService.getWriteRelays();
     const pool = this._nostrRelaysService.getPool();
 
-    const signedEvent = this._nostrSignerService.signEvent(event);
+    const signedEvent = await this._nostrSignerService.signEvent(event);
 
     // check if any relay is successful
     const results = await Promise.allSettled(

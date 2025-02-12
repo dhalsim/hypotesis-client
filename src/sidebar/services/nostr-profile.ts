@@ -49,10 +49,10 @@ export class NostrProfileService {
   }
 
   /**
-   * Load a Nostr profile for the given private key.
+   * Load a Nostr profile for the given public key.
    * This will set the profile loading state and fetch profile data.
    */
-  async loadProfile(publicKeyHex: string) {
+  async loadProfile(publicKeyHex: string, useCache: boolean = true) {
     try {
       // Set initial loading state
       const initialProfile: NostrProfile = {
@@ -63,7 +63,7 @@ export class NostrProfileService {
       this._store.setNostrProfile(initialProfile);
 
       // Check cache first
-      const cachedProfile = this.getCachedProfile(publicKeyHex);
+      const cachedProfile = useCache ? this.getCachedProfile(publicKeyHex) : null;
       
       if (cachedProfile) {
         this._store.setNostrProfile(cachedProfile);
@@ -72,6 +72,7 @@ export class NostrProfileService {
       }
 
       const profile = await this.fetchProfile(publicKeyHex);
+      
       this.cacheProfile(profile);
       this._store.setNostrProfile(profile);
     } catch (err) {
