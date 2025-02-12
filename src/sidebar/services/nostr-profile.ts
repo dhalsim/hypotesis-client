@@ -1,5 +1,6 @@
 import type { SidebarStore } from '../store';
 import type { NostrProfile } from '../store/modules/nostr';
+
 import type { NostrRelaysService } from './nostr-relays';
 
 interface CachedProfile {
@@ -41,13 +42,6 @@ export class NostrProfileService {
     return cached.profile;
   }
 
-  private cacheProfile(profile: NostrProfile) {
-    this._profileCache.set(profile.publicKeyHex, {
-      profile,
-      timestamp: Date.now(),
-    });
-  }
-
   /**
    * Load a Nostr profile for the given public key.
    * This will set the profile loading state and fetch profile data.
@@ -73,7 +67,11 @@ export class NostrProfileService {
 
       const profile = await this.fetchProfile(publicKeyHex);
       
-      this.cacheProfile(profile);
+      this._profileCache.set(profile.publicKeyHex, {
+        profile,
+        timestamp: Date.now(),
+      });
+      
       this._store.setNostrProfile(profile);
     } catch (err) {
       console.error('Failed to load Nostr profile:', err);

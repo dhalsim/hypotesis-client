@@ -1,20 +1,17 @@
-import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 import { generateSecretKey, getPublicKey } from 'nostr-tools';
-import {
-  BunkerSigner,
-  parseBunkerInput,
-} from 'nostr-tools/nip46'
+import { BunkerSigner, parseBunkerInput } from 'nostr-tools/nip46'
 
 import type { SidebarStore } from '../store';
 import type { NostrState as NostrSettingsState } from '../store/modules/nostr';
+
 import type { LocalStorageService } from './local-storage';
 import type { NostrProfileService } from './nostr-profile';
 
 const STORAGE_KEY = 'nostr.settings';
 
-type NostrSettingsLocalStorage = Omit<NostrSettingsState, 'privateKey' | 'bunkerSecret'> & {
-  privateKeyHex: string | null;
-  bunkerSecretHex: string | null;
+type LocalStorageNostrSettings = Omit<NostrSettingsState, 'privateKey' | 'bunkerSecret'> & {
+  privateKey?: object;
+  bunkerSecret?: object;
 };
 
 /**
@@ -45,15 +42,7 @@ export class NostrSettingsService {
       return;
     }
 
-    this._store.loadState({
-      ...saved,
-      privateKey: saved.privateKeyHex 
-        ? hexToBytes(saved.privateKeyHex) 
-        : null,
-      bunkerSecret: saved.bunkerSecretHex 
-        ? hexToBytes(saved.bunkerSecretHex) 
-        : null,
-    });
+    this._store.loadState(saved);
   }
 
   private _getNostrSettingsState(): NostrSettingsState{
@@ -71,67 +60,42 @@ export class NostrSettingsService {
   }
 
   /**
-   * Get the current private key hex string
-   */
-  getPrivateKeyHex(): string | null {
-    const saved = this._getNostrSettingsFromLocalStorage();
-
-    if (!saved) {
-      return null;
-    }
-
-    return saved.privateKeyHex ?? null;
-  }
-
-  /**
    * Set the private key hex string to the store and local storage
    */
   async setPrivateKey(privateKey: Uint8Array | null) {
-    const publicKeyHex = privateKey ? getPublicKey(privateKey) : null;
-    
-    const state = this._getNostrSettingsState();
-    const settings = await this._convertStateToLocalStorage(state);
-
-    try {
-      this._saveNostrSettingsToLocalStorage(settings);
-
-      this._store.setPrivateKey(privateKey);
-      this._store.setPublicKeyHex(publicKeyHex);
-      this._store.setConnectMode('nsec');
+    const publicKeyHex = privateKey 
+      ? getPublicKey(privateKey) 
+      : null;
       
-      // Trigger profile loading when private key is set
-      if (publicKeyHex) {
-        this._nostrProfileService.loadProfile(publicKeyHex, false);
-      } else {
-        this._nostrProfileService.clearProfile();
-      }
-    } catch (e) {
-      console.error('Failed to save nostr settings to localStorage:', e);
+    this._store.setPrivateKey(privateKey);
+    this._store.setPublicKeyHex(publicKeyHex);
+    this._store.setConnectMode('nsec');
+    
+    // Trigger profile loading when private key is set
+    if (publicKeyHex) {
+      this._nostrProfileService.loadProfile(publicKeyHex, false);
+    } else {
+      this._nostrProfileService.clearProfile();
     }
+    
+    this._saveNostrSettingsToLocalStorage(this._getNostrSettingsState());
   }
 
   /**
    * Set the bunker URL
    */
   async setBunkerUrl(bunkerUrl: string | null) {
-    const state = this._getNostrSettingsState();
-
     // If bunker URL is null, we need to clear the bunker URL and secret key
     // and set back to nostr-connect mode if private key exists
     if (!bunkerUrl) {
-      if (state.connectMode === 'bunker') {
-        // fix connect mode
-        if (state.privateKey) {
+      if (this._store.connectMode === 'bunker') {
+        // set connect mode
+        if (this._store.privateKey) {
           // If private key exists, set back to nsec mode
           this._store.setConnectMode('nsec');
-          state.connectMode = 'nsec';
-
-          // we want to keep the private key
-          this._store.setPrivateKey(state.privateKey);
         } else {
           // If private key does not exist, set back to nostr-connect mode
           this._store.setConnectMode('nostr-connect');
-          state.connectMode = 'nostr-connect';
 
           // clear private key
           this._store.setPrivateKey(null);
@@ -141,20 +105,10 @@ export class NostrSettingsService {
       // clear bunker secret and url
       this._store.setBunkerSecret(null);
       this._store.setBunkerUrl(null);
-      state.bunkerSecret = null;
-      state.bunkerUrl = null;
       
       this._nostrProfileService.clearProfile();
 
-      const settings = await this._convertStateToLocalStorage(state);
-
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { bunkerSecret, ...toSave } = state;
-
-      this._saveNostrSettingsToLocalStorage({
-        ...settings,
-        ...toSave,
-      });
+      this._saveNostrSettingsToLocalStorage(this._getNostrSettingsState());
 
       return;
     }
@@ -165,7 +119,7 @@ export class NostrSettingsService {
       return;
     }
 
-    const secret = state.bunkerSecret ?? generateSecretKey();
+    const secret = this._store.bunkerSecret ?? generateSecretKey();
     const bunkerSigner = new BunkerSigner(secret, pointer);
 
     try {
@@ -176,27 +130,16 @@ export class NostrSettingsService {
       }
     }
 
-    state.bunkerSecret = secret;
-    state.bunkerUrl = bunkerUrl;
-    state.connectMode = 'bunker';
-
+    const publicKeyHex = await bunkerSigner.getPublicKey();
+    
+    this._store.setPublicKeyHex(publicKeyHex);
     this._store.setBunkerSecret(secret);
     this._store.setBunkerUrl(bunkerUrl);
     this._store.setConnectMode('bunker');
-
-    const publicKeyHex = await bunkerSigner.getPublicKey();
-
-    state.publicKeyHex = publicKeyHex;
-    this._store.setPublicKeyHex(publicKeyHex);
     
     this._nostrProfileService.loadProfile(publicKeyHex, false);
     
-    this._saveNostrSettingsToLocalStorage({
-      ...state,
-      privateKeyHex: state.privateKey 
-        ? bytesToHex(state.privateKey) : null,
-      bunkerSecretHex: bytesToHex(secret),
-    });
+    this._saveNostrSettingsToLocalStorage(this._getNostrSettingsState());
   }
 
   /**
@@ -207,24 +150,22 @@ export class NostrSettingsService {
     this.setBunkerUrl(null);
   }
 
-  private async _convertStateToLocalStorage(
-    state: NostrSettingsState
-  ): Promise<NostrSettingsLocalStorage> {
-    const { privateKey, bunkerSecret, ...rest } = state;
-
-    return {
-      ...rest,
-      privateKeyHex: privateKey ? bytesToHex(privateKey) : null,
-      bunkerSecretHex: bunkerSecret ? bytesToHex(bunkerSecret) : null,
-    }
-  }
-
-  private _getNostrSettingsFromLocalStorage(): NostrSettingsLocalStorage | null {
+  private _getNostrSettingsFromLocalStorage(): NostrSettingsState | null {
     const savedString = this._storage.getItem(STORAGE_KEY);
 
     if (savedString) {
       try {
-        return JSON.parse(savedString) as NostrSettingsLocalStorage;
+        const saved = JSON.parse(savedString) as LocalStorageNostrSettings;
+
+        return {
+          ...saved,
+          privateKey: saved.privateKey 
+            ? new Uint8Array(Object.values(saved.privateKey)) 
+            : null,
+          bunkerSecret: saved.bunkerSecret 
+            ? new Uint8Array(Object.values(saved.bunkerSecret)) 
+            : null,
+        };
       } catch {
         throw new Error('Failed to load nostr settings from localStorage');
       }
@@ -233,7 +174,7 @@ export class NostrSettingsService {
     }
   }
 
-  private _saveNostrSettingsToLocalStorage(settings: NostrSettingsLocalStorage) {
+  private _saveNostrSettingsToLocalStorage(settings: NostrSettingsState) {
     try {
       this._storage.setItem(STORAGE_KEY, JSON.stringify(settings));
     } catch {

@@ -5,12 +5,13 @@ import {
   ReplyIcon,
 } from '@hypothesis/frontend-shared';
 
-import type { SavedAnnotation } from '../../../types/api';
+import { useSidebarStore } from '../../store';
 import { annotationSharingLink } from '../../helpers/annotation-sharing';
 import { withServices } from '../../service-context';
+import type { SavedAnnotation } from '../../../types/api';
 import type { AnnotationsService } from '../../services/annotations';
 import type { ToastMessengerService } from '../../services/toast-messenger';
-import { useSidebarStore } from '../../store';
+
 import AnnotationShareControl from './AnnotationShareControl';
 
 export type AnnotationActionBarProps = {

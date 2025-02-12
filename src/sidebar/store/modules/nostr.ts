@@ -1,4 +1,3 @@
-import { hexToBytes } from '@noble/hashes/utils';
 import { getPublicKey } from 'nostr-tools';
 
 import { createStoreModule, makeAction } from '../create-store';
@@ -35,20 +34,15 @@ const initialState: NostrState = {
 };
 
 const reducers = {
-  SET_PRIVATE_KEY_HEX(state: NostrState, action: { privateKeyHex: string | null }) {
-    const privateKey = action.privateKeyHex
-      ? hexToBytes(action.privateKeyHex)
-      : null;
+  SET_PRIVATE_KEY(state: NostrState, action: { privateKey: Uint8Array | null }) {
 
     return {
       ...state,
-      privateKeyHex: action.privateKeyHex,
-      privateKey,
-      publicKeyHex: privateKey ? getPublicKey(privateKey) : null,
+      privateKey: action.privateKey,
+      publicKeyHex: action.privateKey 
+        ? getPublicKey(action.privateKey) 
+        : null,
     };
-  },
-  SET_PRIVATE_KEY(state: NostrState, action: { privateKey: Uint8Array | null }) {
-    return { ...state, privateKey: action.privateKey };
   },
   SET_PUBLIC_KEY_HEX(state: NostrState, action: { publicKeyHex: string | null }) {
     return { ...state, publicKeyHex: action.publicKeyHex };
@@ -94,7 +88,7 @@ function setPrivateKey(privateKey: Uint8Array | null) {
 }
 
 function setPublicKeyHex(publicKeyHex: string | null) {
-  return makeAction(reducers, 'SET_PUBLIC_KEY_HEX', { publicKeyHex   });
+  return makeAction(reducers, 'SET_PUBLIC_KEY_HEX', { publicKeyHex });
 }
 
 function setBunkerUrl(bunkerUrl: string | null) {
@@ -168,7 +162,7 @@ export const nostrModule = createStoreModule(initialState, {
   actionCreators: {
     loadState,
     setPrivateKey,
-    setPublicKeyHex,
+    setPublicKeyHex, 
     setBunkerUrl,
     setBunkerSecret,
     setConnectMode,
