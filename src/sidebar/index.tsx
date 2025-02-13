@@ -74,7 +74,7 @@ function syncRoute(router: RouterService) {
  * @inject
  */
 function loadGroupsAndProfile(groups: GroupsService) {
-  groups.load();
+  void groups.load();
 }
 
 /**

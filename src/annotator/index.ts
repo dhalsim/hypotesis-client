@@ -145,7 +145,7 @@ function init() {
     destroyables.push(hypothesisInjector, guest);
   }
 
-  unloadRequested.then(() => {
+  void unloadRequested.then(() => {
     destroyables.forEach(instance => instance.destroy());
 
     // Remove all the `<link>`, `<script>` and `<style>` elements added to the
@@ -174,4 +174,6 @@ function documentReady(): Promise<void> {
   });
 }
 
-documentReady().then(init);
+void documentReady().then(init).catch(err => {
+  console.error('Error initializing Hypothesis:', err);
+});

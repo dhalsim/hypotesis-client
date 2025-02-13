@@ -46,7 +46,7 @@ export class NostrProfileService {
    * Load a Nostr profile for the given public key.
    * This will set the profile loading state and fetch profile data.
    */
-  async loadProfile(publicKeyHex: string, useCache: boolean = true) {
+  async loadProfile(publicKeyHex: string, useCacheOnRead: boolean = true) {
     try {
       // Set initial loading state
       const initialProfile: NostrProfile = {
@@ -57,7 +57,9 @@ export class NostrProfileService {
       this._store.setNostrProfile(initialProfile);
 
       // Check cache first
-      const cachedProfile = useCache ? this.getCachedProfile(publicKeyHex) : null;
+      const cachedProfile = useCacheOnRead 
+        ? this.getCachedProfile(publicKeyHex) 
+        : null;
       
       if (cachedProfile) {
         this._store.setNostrProfile(cachedProfile);
@@ -81,16 +83,8 @@ export class NostrProfileService {
   }
 
   async fetchProfile(publicKeyHex: string): Promise<NostrProfile> {
-    const cachedProfile = this.getCachedProfile(publicKeyHex);
-
-    if (cachedProfile) {
-      return cachedProfile;
-    }
-
     const pool = this._nostrRelaysService.getPool();
-    const relays = this._nostrRelaysService.getReadRelays().map(
-      relay => relay.url
-    );
+    const relays = this._nostrRelaysService.getReadRelays();
     
     const filter = {
       kinds: [0],

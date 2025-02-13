@@ -70,7 +70,7 @@ function PrivateKeyTab({
       setIsConnecting(true);
       setError(null);
       
-      nostrSettingsService.setPrivateKey(privateKey);
+      await nostrSettingsService.setPrivateKey(privateKey);
       
       onClose();
     } catch (err) {

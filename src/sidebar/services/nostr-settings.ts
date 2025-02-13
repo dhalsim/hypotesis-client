@@ -74,7 +74,7 @@ export class NostrSettingsService {
     
     // Trigger profile loading when private key is set
     if (publicKeyHex) {
-      this._nostrProfileService.loadProfile(publicKeyHex, false);
+      await this._nostrProfileService.loadProfile(publicKeyHex, false);
     } else {
       this._nostrProfileService.clearProfile();
     }
@@ -138,7 +138,7 @@ export class NostrSettingsService {
     this._store.setBunkerUrl(bunkerUrl);
     this._store.setConnectMode('bunker');
     
-    this._nostrProfileService.loadProfile(publicKeyHex, false);
+    await this._nostrProfileService.loadProfile(publicKeyHex, false);
     
     this._saveNostrSettingsToLocalStorage(this._getNostrSettingsState());
   }
@@ -146,9 +146,9 @@ export class NostrSettingsService {
   /**
    * Clear the private key and bunker URL
    */
-  clearPrivateKeyAndBunkerUrl() {
-    this.setPrivateKey(null);
-    this.setBunkerUrl(null);
+  async clearPrivateKeyAndBunkerUrl() {
+    await this.setPrivateKey(null);
+    await this.setBunkerUrl(null);
   }
 
   private _getNostrSettingsFromLocalStorage(): NostrSettingsState | null {

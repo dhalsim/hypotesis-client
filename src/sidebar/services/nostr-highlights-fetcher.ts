@@ -1,5 +1,5 @@
 import { kinds } from 'nostr-tools';
-import type { SubCloser } from 'nostr-tools/lib/types/abstract-pool';
+import type { SubCloser } from 'nostr-tools/abstract-pool';
 
 import type { SidebarStore } from '../store';
 
@@ -41,7 +41,7 @@ export class NostrHighlightsFetcherService {
     this._store = store;
   }
 
-  async loadByUri({
+  loadByUri({
     uri,
     onError
   }: HighlightsFetchOptions) {
@@ -60,7 +60,7 @@ export class NostrHighlightsFetcherService {
     const pool = this._nostrRelaysService.getPool();
 
     this._subCloser = pool.subscribeMany(
-      relays.map((relay) => relay.url),
+      relays,
       [
         {
           kinds: [kinds.Highlights],

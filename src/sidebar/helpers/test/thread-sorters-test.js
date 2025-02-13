@@ -43,7 +43,6 @@ describe('sidebar/util/thread-sorters', () => {
       it('sorts by newest created root annotation', () => {
         // Disable eslint: `sorters` properties start with capital letters
         // to match their displayed sort option values
-        /* eslint-disable-next-line new-cap */
         assert.equal(sorters.Newest(testCase.a, testCase.b), testCase.expected);
       });
     });
@@ -70,7 +69,6 @@ describe('sidebar/util/thread-sorters', () => {
       it('sorts by oldest created root annotation', () => {
         // Disable eslint: `sorters` properties start with capital letters
         // to match their displayed sort option values
-        /* eslint-disable-next-line new-cap */
         assert.equal(sorters.Oldest(testCase.a, testCase.b), testCase.expected);
       });
     });
@@ -125,7 +123,6 @@ describe('sidebar/util/thread-sorters', () => {
         assert.equal(
           // Disable eslint: `sorters` properties start with capital letters
           // to match their displayed sort option values
-          /* eslint-disable-next-line new-cap */
           sorters.Location(testCase.a, testCase.b),
           testCase.expected,
         );
@@ -166,7 +163,6 @@ describe('sidebar/util/thread-sorters', () => {
         assert.equal(
           // Disable eslint: `sorters` properties start with capital letters
           // to match their displayed sort option values
-          /* eslint-disable-next-line new-cap */
           sorters.Location(testCase.a, testCase.b),
           testCase.expected,
         );

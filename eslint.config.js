@@ -30,6 +30,20 @@ export default [
   ...hypothesisJSX,
   ...hypothesisTS,
 
+  // Add TypeScript-specific rules with type checking enabled
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: process.cwd(),
+      }
+    },
+    rules: {
+      '@typescript-eslint/no-floating-promises': 'error',
+    },
+  },
+
   // Annotator module
   {
     files: ['src/annotator/**/*.{js|tx|tsx}'],

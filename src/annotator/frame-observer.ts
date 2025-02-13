@@ -89,7 +89,7 @@ export class FrameObserver {
 
     for (const frame of frames) {
       if (!this._annotatableFrames.has(frame)) {
-        this._addFrame(frame);
+        void this._addFrame(frame);
       }
     }
 

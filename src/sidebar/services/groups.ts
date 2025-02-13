@@ -90,7 +90,7 @@ export class GroupsService {
           // Ignore the first time that the profile is loaded.
           return;
         }
-        this.load();
+        void this.load();
       },
       shallowEqual,
     );

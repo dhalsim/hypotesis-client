@@ -66,6 +66,7 @@ const reducers = {
     if (!state.profile) {
       return state;
     }
+    
     return {
       ...state,
       profile: { ...state.profile, loading: action.loading },

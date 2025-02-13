@@ -121,7 +121,6 @@ export class Injector {
 
       let instance;
       if (isClassProvider(provider)) {
-        // eslint-disable-next-line new-cap
         instance = new provider.class(...resolvedDependencies);
       } else {
         const factory = provider.factory;

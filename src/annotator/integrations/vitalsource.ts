@@ -127,7 +127,7 @@ export class VitalSourceInjector {
           !body.querySelector('#page-content');
 
         if (isBookContent) {
-          injectClient(frame, config, 'vitalsource-content');
+          void injectClient(frame, config, 'vitalsource-content');
         }
       });
     };

@@ -1,4 +1,4 @@
-import type { SubCloser } from "nostr-tools/lib/types/pool";
+import type { SubCloser } from "nostr-tools/abstract-pool";
 
 import type { SidebarStore } from "../store";
 
@@ -44,7 +44,7 @@ export class NostrPageNotesFetcherService {
     const [normalizedUri,] = normalizeUrl(uri);
 
     this._subCloser = pool.subscribeMany(
-      relays.map((relay) => relay.url),
+      relays,
       [
         {
           kinds: [1111],

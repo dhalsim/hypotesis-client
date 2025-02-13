@@ -67,7 +67,7 @@ export class QRCodeScanner implements Destroyable {
 
   destroy() {
     if (this.scanner) {
-      this.scanner.clear();
+      void this.scanner.clear();
     }
     
     this.element.style.visibility = 'hidden';

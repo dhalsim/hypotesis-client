@@ -92,7 +92,7 @@ function HypothesisApp({
     store.removeAnnotations(store.unsavedAnnotations());
     store.discardAllDrafts();
     
-    nostrSettingsService.clearPrivateKeyAndBunkerUrl();
+    await nostrSettingsService.clearPrivateKeyAndBunkerUrl();
   };
 
   return (

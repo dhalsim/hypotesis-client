@@ -1,0 +1,7 @@
+.relay-grid {
+  @apply grid gap-4;
+  
+  input[type="checkbox"] {
+    @apply w-4 h-4 cursor-pointer;
+  }
+} 

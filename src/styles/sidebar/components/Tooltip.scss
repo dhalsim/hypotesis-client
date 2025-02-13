@@ -1,0 +1,52 @@
+@layer components {
+  .simple-tooltip {
+    @apply relative;
+    --tooltip-margin: 10px;
+    --tooltip-font-size: 12px;
+    --tooltip-max-width: 300px;
+  
+    &::after {
+      content: attr(data-tooltip-text);
+      @apply absolute bg-grey-9 text-white rounded p-[5px] invisible opacity-0 z-50;
+      @apply transition-opacity duration-300;
+      
+      font-size: var(--tooltip-font-size);
+      white-space: normal;
+      max-width: var(--tooltip-max-width);
+      width: max-content;
+      height: fit-content;
+    }
+  
+    /* Default: show below */
+    &::after {
+      @apply bottom-full;
+      transform: translate(-50%, calc(var(--tooltip-margin) * -1));
+    }
+  
+    /* Show above when data-show-above is true */
+    &[data-show-tooltip-above="true"]::after {
+      @apply bottom-full top-auto;
+      transform: translate(-50%, calc(var(--tooltip-margin) * -1));
+    }
+  
+    &[data-show-tooltip-right="true"]::after {
+      @apply left-full right-auto top-1/2;
+      transform: translate(var(--tooltip-margin), -50%);
+    }
+  
+    &[data-show-tooltip-left="true"]::after {
+      @apply right-full left-auto top-1/2;
+      transform: translate(calc(var(--tooltip-margin) * -1), -50%);
+    }
+  
+    &[data-show-tooltip-below="true"]::after {
+      @apply top-full bottom-auto;
+      transform: translate(-50%, var(--tooltip-margin));
+    }
+  
+    /* Show on hover */
+    &:hover::after {
+      @apply visible opacity-100;
+    }
+  }
+} 

@@ -342,11 +342,11 @@ export class Guest extends TinyEmitter implements Annotator, Destroyable {
     }
 
     this._hostRPC = new PortRPC();
-    this._connectHost(hostFrame);
+    void this._connectHost(hostFrame);
 
     this._sidebarRPC = new PortRPC();
     this._sidebarLayout = null;
-    this._connectSidebar();
+    void this._connectSidebar();
 
     this._bucketBarClient = new BucketBarClient({
       contentContainer: this._integration.contentContainer(),
@@ -502,7 +502,7 @@ export class Guest extends TinyEmitter implements Annotator, Destroyable {
     );
 
     this._hostRPC.on('scrollToAnnotation', (tag: string) => {
-      this._scrollToAnnotation(tag);
+      void this._scrollToAnnotation(tag);
     });
 
     this._hostRPC.on('selectAnnotations', (tags: string[], toggle: boolean) =>
@@ -530,6 +530,7 @@ export class Guest extends TinyEmitter implements Annotator, Destroyable {
     // Discover and connect to the host frame. All RPC events must be
     // registered before creating the channel.
     const hostPort = await this._portFinder.discover('host');
+    
     this._hostRPC.connect(hostPort);
   }
 
@@ -574,7 +575,7 @@ export class Guest extends TinyEmitter implements Annotator, Destroyable {
     );
 
     this._sidebarRPC.on('scrollToAnnotation', (tag: string) => {
-      this._scrollToAnnotation(tag);
+      void this._scrollToAnnotation(tag);
     });
 
     // Handler for controls on the sidebar
@@ -621,11 +622,10 @@ export class Guest extends TinyEmitter implements Annotator, Destroyable {
     //
     // RPC calls are deferred until a connection is made, so these steps can
     // complete in either order.
-    this._portFinder.discover('sidebar').then(port => {
-      this._sidebarRPC.connect(port);
-    });
-
-    this._sendDocumentInfo();
+    const port = await this._portFinder.discover('sidebar');
+    this._sidebarRPC.connect(port);
+    
+    void this._sendDocumentInfo();
   }
 
   destroy() {
@@ -816,7 +816,7 @@ export class Guest extends TinyEmitter implements Annotator, Destroyable {
     };
 
     this._sidebarRPC.call('createAnnotation', annotation);
-    this.anchor(annotation);
+    await this.anchor(annotation);
 
     // Removing the text selection triggers the `SelectionObserver` callback,
     // which causes the adder to be removed after some delay.

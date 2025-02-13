@@ -152,7 +152,7 @@ function AnnotationEditor({
     if ((event.metaKey || event.ctrlKey) && key === 'Enter') {
       event.stopPropagation();
       event.preventDefault();
-      onSave();
+      void onSave();
     }
   };
 
