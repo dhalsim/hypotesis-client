@@ -53,7 +53,6 @@ function HypothesisApp({
   const isSidebar = route === 'sidebar';
 
   useEffect(() => {
-    // TODO: nostr: when to open the help panel? it used to check the profile and some settings
     if (localStorage.getItem('openHelpPanel') !== 'false') {
       store.openSidebarPanel('help');
     }

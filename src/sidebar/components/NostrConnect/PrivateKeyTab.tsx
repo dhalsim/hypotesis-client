@@ -5,6 +5,7 @@ import { bytesToHex } from '@noble/hashes/utils';
 
 import { withServices } from '../../service-context';
 import type { NostrSettingsService } from '../../services/nostr-settings';
+import { useSidebarStore } from '../../store';
 
 type PrivateKeyTabProps = {
   isOpen: boolean;
@@ -17,7 +18,12 @@ function PrivateKeyTab({
   onClose,
   nostrSettingsService,
 }: PrivateKeyTabProps) {
-  const [privateKey, setPrivateKey] = useState<Uint8Array | null>(null);
+  const store = useSidebarStore();
+
+  const [privateKey, setPrivateKey] = useState<Uint8Array | null>(
+    store.getPrivateKey()
+  );
+  
   const [privateKeyHex, setPrivateKeyHex] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -26,7 +32,9 @@ function PrivateKeyTab({
   useEffect(() => {
     if (isOpen && privateKey) {
       setPrivateKeyHex(bytesToHex(privateKey));
+      
       const nsec = getEncodedNsec(privateKey);
+      
       if (nsec && nsecRef.current) {
         nsecRef.current.value = nsec;
       }
@@ -37,13 +45,16 @@ function PrivateKeyTab({
     try {
       if (nsecRef.current?.value) {
         const decoded = nip19.decode(nsecRef.current.value);
+        
         if (decoded.type === 'nsec') {
           setPrivateKey(decoded.data);
+          
           setError(null);
         }
       }
     } catch (err) {
       setError('Invalid private key format');
+      
       console.error('Failed to decode private key:', err);
     }
   };
@@ -51,16 +62,20 @@ function PrivateKeyTab({
   const handleSaveAndConnect = async () => {
     if (!privateKey) {
       setError('Please enter a valid private key');
+      
       return;
     }
 
     try {
       setIsConnecting(true);
       setError(null);
+      
       nostrSettingsService.setPrivateKey(privateKey);
+      
       onClose();
     } catch (err) {
       console.error('Failed to connect:', err);
+      
       setError('Failed to connect. Please try again.');
     } finally {
       setIsConnecting(false);

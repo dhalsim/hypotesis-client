@@ -23,6 +23,7 @@ import type {
   SidebarToGuestEvent,
 } from '../types/port-rpc-events';
 import { Adder } from './adder';
+import { QRCodeScanner } from './qr-code-scanner';
 import { TextRange } from './anchoring/text-range';
 import { BucketBarClient } from './bucket-bar-client';
 import { LayoutChangeEvent } from './events';
@@ -205,6 +206,7 @@ export class Guest extends TinyEmitter implements Annotator, Destroyable {
   private _contentReady?: Promise<void>;
 
   private _adder: Adder;
+  private _qrCodeScanner: QRCodeScanner;
   private _clusterToolbar?: HighlightClusterController;
   private _hostFrame: Window;
   private _highlightsVisible: boolean;
@@ -286,6 +288,14 @@ export class Guest extends TinyEmitter implements Annotator, Destroyable {
       // the corresponding comments in the sidebar.
       onShowAnnotations: tags =>
         this.selectAnnotations(tags, { focusInSidebar: true }),
+    });
+
+    this._qrCodeScanner = new QRCodeScanner(this.element, {
+      onScanSuccess: (data: string) => {
+        this.sendQrCodeScanResult(data);
+      },
+      onScanError: () => {
+      },
     });
 
     this._selectionObserver = new SelectionObserver(range => {
@@ -597,6 +607,12 @@ export class Guest extends TinyEmitter implements Annotator, Destroyable {
       },
     );
 
+    this._sidebarRPC.on('askForCameraPermission', () => {
+      this._sidebarRPC.call('closeSidebar');
+      
+      this._qrCodeScanner.show()
+    });
+
     this._sidebarRPC.on('navigateToSegment', (annotation: AnnotationData) =>
       this._integration.navigateToSegment?.(annotation),
     );
@@ -807,6 +823,12 @@ export class Guest extends TinyEmitter implements Annotator, Destroyable {
     removeTextSelection();
 
     return annotation;
+  }
+
+  sendQrCodeScanResult(data: string) {
+    this._qrCodeScanner.destroy();    
+    this._sidebarRPC.call('openSidebar');
+    this._sidebarRPC.call('qrCodeScanResult', data);
   }
 
   /**

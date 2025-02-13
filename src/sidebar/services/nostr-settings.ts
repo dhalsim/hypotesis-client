@@ -63,11 +63,12 @@ export class NostrSettingsService {
    * Set the private key hex string to the store and local storage
    */
   async setPrivateKey(privateKey: Uint8Array | null) {
+    this._store.setPrivateKey(privateKey);
+    
     const publicKeyHex = privateKey 
       ? getPublicKey(privateKey) 
       : null;
-      
-    this._store.setPrivateKey(privateKey);
+    
     this._store.setPublicKeyHex(publicKeyHex);
     this._store.setConnectMode('nsec');
     
@@ -119,7 +120,7 @@ export class NostrSettingsService {
       return;
     }
 
-    const secret = this._store.bunkerSecret ?? generateSecretKey();
+    const secret = this._store.getBunkerSecret() ?? generateSecretKey();
     const bunkerSigner = new BunkerSigner(secret, pointer);
 
     try {

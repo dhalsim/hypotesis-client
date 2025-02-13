@@ -488,6 +488,12 @@ export class FrameSyncService {
       this._store.toggleSelectedAnnotations(this._store.findIDsForTags(tags));
     });
 
+    guestRPC.on('qrCodeScanResult', (data: string) => {
+      this._store.setBunkerUrl(data);
+
+      this._hostRPC.call('openSidebar');
+    });
+
     guestRPC.on('openSidebar', () => {
       this._hostRPC.call('openSidebar');
     });
@@ -618,6 +624,10 @@ export class FrameSyncService {
       return;
     }
     this._guestRPC.forEach(rpc => rpc.call('hoverAnnotations', tags));
+  }
+
+  askForCameraPermission() {
+    this._guestRPC.forEach(rpc => rpc.call('askForCameraPermission'));
   }
 
   /**

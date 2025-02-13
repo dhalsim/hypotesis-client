@@ -18,6 +18,7 @@ import type {
   HostToSidebarEvent,
   SidebarToHostEvent,
 } from '../types/port-rpc-events';
+
 import { annotationCounts } from './annotation-counts';
 import { BucketBar } from './bucket-bar';
 import ToastMessages from './components/ToastMessages';
@@ -176,6 +177,7 @@ export class Sidebar implements Destroyable {
         this.iframeContainer.classList.add('theme-clean');
       } else {
         let bucketBarContainer: HTMLElement | undefined;
+        
         if (config.bucketContainerSelector) {
           bucketBarContainer = document.querySelector(
             config.bucketContainerSelector,
@@ -333,6 +335,7 @@ export class Sidebar implements Destroyable {
     this.bucketBar?.destroy();
     this._listeners.removeAll();
     this._dragResizeHandler?.destroy();
+    
     if (this._hypothesisSidebar) {
       // Explicitly unmounting the "messages" element, to make sure effects are clean-up
       render(null, this._messagesElement!);
@@ -340,6 +343,7 @@ export class Sidebar implements Destroyable {
     } else {
       this.iframe.remove();
     }
+    
     this._emitter.destroy();
 
     // Unregister the sidebar iframe as a handler for errors in this frame.
@@ -447,10 +451,12 @@ export class Sidebar implements Destroyable {
       this.hide();
       this._emitter.publish('openNotebook', groupId);
     });
+    
     this._sidebarRPC.on('openProfile', () => {
       this.hide();
       this._emitter.publish('openProfile');
     });
+    
     this._emitter.subscribe('closeProfile', () => {
       this.show();
     });
@@ -465,6 +471,7 @@ export class Sidebar implements Destroyable {
     this._sidebarRPC.on('toastMessageAdded', (newMessage: ToastMessage) => {
       this._emitter.publish('toastMessageAdded', newMessage);
     });
+    
     this._sidebarRPC.on('toastMessageDismissed', (messageId: string) => {
       this._emitter.publish('toastMessageDismissed', messageId);
     });
@@ -479,6 +486,7 @@ export class Sidebar implements Destroyable {
       ['profileRequested', this.onProfileRequest],
       ['helpRequested', this.onHelpRequest],
     ];
+    
     eventHandlers.forEach(([event, handler]) => {
       if (handler) {
         this._sidebarRPC.on(event, () => handler());
