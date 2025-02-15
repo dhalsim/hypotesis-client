@@ -2,98 +2,96 @@ import { SimplePool } from 'nostr-tools';
 
 import type { SidebarStore } from '../store';
 
-import type { LocalStorageService } from './local-storage';
-
-type RelaySettings = {
-  isEnabled: boolean;
-  forWrite: boolean;
-  forRead: boolean;
+type RelayProps = {
+  write: boolean;
+  read: boolean;
 }
 
 type RelayMap = {
-  [key: string]: RelaySettings;
+  [key: string]: RelayProps;
 }
 
-type InsertOrUpdateLocalRelayOptions = {
-  pubkey: string;
-  relay: string;
-  isEnabled: boolean;
-  forWrite: boolean;
-  forRead: boolean;
+type Nip65CacheEntry = {
+  relayMap: RelayMap;
+  timestamp: number;
 }
 
 /**
  * @inject
  */
 export class NostrRelaysService {
-  private _localRelayMap: RelayMap;
-  private _remoteRelayMap: RelayMap;
+  private _relayMap: RelayMap;
   private _store: SidebarStore;
-  private _localStorage: LocalStorageService;
   private _pool: SimplePool;
+  private _nip65Cache: Map<string, Nip65CacheEntry> = new Map();
+  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
 
-  constructor(localStorage: LocalStorageService, store: SidebarStore) {
+  constructor(store: SidebarStore) {
     this._store = store;
     this._pool = new SimplePool();
     this._pool.trackRelays = true;
-    this._localStorage = localStorage;
 
-    const isNostrLoggedIn = this._store.isNostrLoggedIn;
+    this._relayMap = this._getHardCodedRelays();
+  }
 
-    const hardCodedRelayMap: RelayMap = {
-      'wss://purplepag.es/': {
-        isEnabled: true,
-        forWrite: false,
-        forRead: true,
-      },
-      'wss://relay.nostr.band/all': {
-        isEnabled: true,
-        forWrite: false,
-        forRead: true,
-      },
-    };
+  loadHardCodedRelays() {
+    this._relayMap = this._getHardCodedRelays();
+  }
 
-    if (process.env.NODE_ENV !== 'production') {
-      hardCodedRelayMap['ws://localhost:10547'] = {
-        isEnabled: true,
-        forWrite: false,
-        forRead: true,
-      };
-    }
-
-    if (!isNostrLoggedIn) {
-      this._localRelayMap = hardCodedRelayMap;
-      this._remoteRelayMap = {};
-
-      return;
-    }
-    
+  async loadNip65Relays() {
     const pubkey = this._store.getNostrProfile()?.publicKeyHex;
 
     if (!pubkey) {
-      this._localRelayMap = hardCodedRelayMap;
-      this._remoteRelayMap = {};
-
       return;
     }
 
-    const localRelaysKey = `nostr.local.relays-${pubkey}`;
-    const remoteRelaysKey = `nostr.remote.relays-${pubkey}`;
+    const cacheEntry = this._nip65Cache.get(pubkey);
 
-    const localRelays = this._localStorage.getItem(localRelaysKey);
-    const remoteRelays = this._localStorage.getItem(remoteRelaysKey);
-
-    if (localRelays) {
-      this._localRelayMap = JSON.parse(localRelays);
-    } else {
-      this._localRelayMap = hardCodedRelayMap;
+    // Check cache first, if it exists and is still valid, use it
+    if (cacheEntry && Date.now() - cacheEntry.timestamp < this.CACHE_DURATION) {
+      this._relayMap = cacheEntry.relayMap;
+      
+      return;
     }
 
-    if (remoteRelays) {
-      this._remoteRelayMap = JSON.parse(remoteRelays);
-    } else {
-      this._remoteRelayMap = {};
+    const nip65Event = await this._pool.get(
+      [...this.getWriteRelays(), ...this.getReadRelays()],
+      {
+        kinds: [10002],
+        authors: [pubkey],
+        limit: 1,
+      }
+    );
+
+    if (!nip65Event) {
+      return;
     }
+
+    const relayTags = nip65Event.tags.filter((tag) => tag[0] === "r");
+
+    this._relayMap = relayTags.reduce((acc, tag) => {
+      acc[tag[1]] = {
+        write: 
+          process.env.NODE_ENV === 'production' 
+            && (tag[2] ===  "write" || !tag[2]),
+        read: tag[2] === "read" || !tag[2],
+      };
+      
+      return acc;
+    }, {} as RelayMap);
+
+    if (process.env.NODE_ENV !== 'production') {
+      this._relayMap['ws://localhost:10547'] = {
+        write: true,
+        read: true,
+      }
+    }
+
+    // Update cache
+    this._nip65Cache.set(pubkey, {
+      relayMap: this._relayMap,
+      timestamp: Date.now(),
+    });
   }
 
   /**
@@ -109,16 +107,11 @@ export class NostrRelaysService {
    */
   getReadRelays(): string[] {
     return [
-      ...new Set([
-        ...Object.entries(this._localRelayMap)
-          .filter(([, relaySettings]) => { 
-            return relaySettings.isEnabled && relaySettings.forRead;
-          }).map(([relay]) => relay),
-        ...Object.entries(this._remoteRelayMap)
-          .filter(([, relaySettings]) => { 
-            return relaySettings.isEnabled && relaySettings.forRead;
-          }).map(([relay]) => relay),
-      ])
+      ...new Set(
+        Object.entries(this._relayMap)
+          .filter(([, relaySettings]) => relaySettings.read)
+          .map(([relay]) => relay)
+      )
     ];
   }
 
@@ -129,59 +122,43 @@ export class NostrRelaysService {
    */
   getWriteRelays(): string[] {
     return [
-      ...new Set([
-        ...Object.entries(this._localRelayMap)
-          .filter(([, relaySettings]) => { 
-            return relaySettings.isEnabled && relaySettings.forWrite;
-          }).map(([relay]) => relay),
-        ...Object.entries(this._remoteRelayMap)
-          .filter(([, relaySettings]) => { 
-            return relaySettings.isEnabled && relaySettings.forWrite;
-          }).map(([relay]) => relay),
-      ])
+      ...new Set(
+        Object.entries(this._relayMap)
+          .filter(([, relaySettings]) => relaySettings.write)
+          .map(([relay]) => relay)
+      )
     ];
   }
 
-  insertOrUpdateLocalRelay({
-    pubkey,
-    relay,
-    isEnabled,
-    forWrite,
-    forRead,
-  }: InsertOrUpdateLocalRelayOptions) {
-    this._localRelayMap[relay] = {
-      isEnabled,
-      forWrite,
-      forRead,
+    private _getHardCodedRelays() {
+    const productionRelayMap: RelayMap = {
+      'wss://purplepag.es/': {
+        write: true,
+        read: true,
+      },
+      'wss://relay.nostr.band/all': {
+        write: true,
+        read: true,
+      },
     };
 
-    this._localStorage.setItem(
-      `nostr.local.relays-${pubkey}`,
-      JSON.stringify(this._localRelayMap)
-    );
-  }
+    const developmentRelayMap: RelayMap = {
+      'wss://purplepag.es/': {
+        write: false,
+        read: true,
+      },
+      'wss://relay.nostr.band/all': {
+        write: false,
+        read: true,
+      },
+      'ws://localhost:10547': {
+        write: true,
+        read: true,
+      }
+    };
 
-  getLocalRelays() {
-    return this._localRelayMap;
-  }
-
-  // TODO: nostr: not sure
-  updateLocalRelays(relays: RelayMap) {
-    const pubkey = this._store.getNostrProfile()?.publicKeyHex;
-    
-    if (!pubkey) {
-      throw new Error('No pubkey found');
-    }
-
-    this._localRelayMap = relays;
-    this._localStorage.setItem(
-      `nostr.local.relays-${pubkey}`,
-      JSON.stringify(this._localRelayMap)
-    );
-
-    // Update the store
-    Object.entries(relays).forEach(([relay, settings]) => {
-      this._store.setLocalRelay({ relay, settings });
-    });
+    return process.env.NODE_ENV === 'production' 
+      ? productionRelayMap
+      : developmentRelayMap;
   }
 }

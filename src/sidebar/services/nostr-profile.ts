@@ -56,6 +56,9 @@ export class NostrProfileService {
 
       this._store.setNostrProfile(initialProfile);
 
+      // Update relays to Nip65 of the user
+      await this._nostrRelaysService.loadNip65Relays();
+
       // Check cache first
       const cachedProfile = useCacheOnRead 
         ? this.getCachedProfile(publicKeyHex) 
@@ -79,6 +82,8 @@ export class NostrProfileService {
       console.error('Failed to load Nostr profile:', err);
       // Clear any existing profile on error
       this._store.setNostrProfile(null);
+      // Update relays to hardcoded relays  
+      this._nostrRelaysService.loadHardCodedRelays();
     }
   }
 

@@ -10,8 +10,7 @@ export type PanelName =
   | 'loginPrompt'
   | 'shareGroupAnnotations'
   | 'searchAnnotations'
-  | 'nostrConnectPanel'
-  | 'nostrRelaysPanel';
+  | 'nostrConnectPanel';
   
 /**
  * The top-level tabs in the sidebar interface. Used to reference which tab
