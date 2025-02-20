@@ -18,8 +18,31 @@ export default [
   },
 
   ...hypothesisBase,
+
+  // Add this configuration to override the new-cap rule
+  {
+    files: ['src/**/*.{js,ts,tsx}'],
+    rules: {
+      'new-cap': 'off',
+    },
+  },
+
   ...hypothesisJSX,
   ...hypothesisTS,
+
+  // Add TypeScript-specific rules with type checking enabled
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: process.cwd(),
+      }
+    },
+    rules: {
+      '@typescript-eslint/no-floating-promises': 'error',
+    },
+  },
 
   // Annotator module
   {

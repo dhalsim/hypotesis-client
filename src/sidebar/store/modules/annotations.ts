@@ -4,19 +4,18 @@
  */
 import type { Dispatch } from 'redux';
 import { createSelector } from 'reselect';
+import { nip19 } from 'nostr-tools';
 
 import { hasOwn } from '../../../shared/has-own';
 import type { Annotation, SavedAnnotation } from '../../../types/api';
 import type { HighlightCluster } from '../../../types/shared';
-import { username as getUsername } from '../../helpers/account-id';
 import * as metadata from '../../helpers/annotation-metadata';
 import { isHighlight, isSaved } from '../../helpers/annotation-metadata';
 import { countIf, toTrueMap, trueKeys } from '../../util/collections';
 import { createStoreModule, makeAction } from '../create-store';
 import { routeModule } from './route';
 import type { State as RouteState } from './route';
-import { sessionModule } from './session';
-import type { State as SessionState } from './session';
+import type { NostrState } from './nostr';
 
 type AnchorStatus = 'anchored' | 'orphan' | 'timeout';
 
@@ -307,7 +306,7 @@ function addAnnotations(annotations: Annotation[]) {
     getState: () => {
       annotations: State;
       route: RouteState;
-      session: SessionState;
+      nostr: NostrState;
     },
   ) {
     const added = annotations.filter(annot => {
@@ -316,13 +315,13 @@ function addAnnotations(annotations: Annotation[]) {
       );
     });
 
-    const profile = sessionModule.selectors.profile(getState().session);
+    const profile = getState().nostr.profile;
 
     dispatch(
       makeAction(reducers, 'ADD_ANNOTATIONS', {
         annotations,
         currentAnnotationCount: getState().annotations.annotations.length,
-        currentUserId: profile.userid,
+        currentUserId: profile?.publicKeyHex ?? null,
       }),
     );
 
@@ -581,7 +580,7 @@ const usersWhoAnnotated = createSelector(
   annotations => {
     const usersMap = new Map<
       string,
-      { user: string; username: string; displayName: string | null }
+      { user: string; displayName: string | null }
     >();
     annotations.forEach(anno => {
       const { user } = anno;
@@ -591,15 +590,14 @@ const usersWhoAnnotated = createSelector(
         return;
       }
 
-      const username = getUsername(user);
       const displayName = anno.user_info?.display_name ?? null;
-      usersMap.set(user, { user, username, displayName });
+      usersMap.set(user, { user, displayName });
     });
 
     // Sort users by username
     return [...usersMap.values()].sort((a, b) => {
-      const aUsername = a.username;
-      const bUsername = b.username;
+      const aUsername = a.displayName ?? nip19.npubEncode(a.user);
+      const bUsername = b.displayName ?? nip19.npubEncode(b.user);
 
       return aUsername.localeCompare(bUsername, undefined, {
         sensitivity: 'base',

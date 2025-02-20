@@ -6,6 +6,7 @@ import type { SidebarSettings } from '../../../types/config';
 
 import {
   annotationRole,
+  isPageNote,
   isReply,
   isSaved,
 } from '../../helpers/annotation-metadata';
@@ -52,6 +53,7 @@ function AnnotationEditor({
   const store = useSidebarStore();
   const group = store.getGroup(annotation.group);
   const isReplyAnno = useMemo(() => isReply(annotation), [annotation]);
+  const isPageNoteAnno = useMemo(() => isPageNote(annotation), [annotation]);
 
   const shouldShowLicense =
     !draft.isPrivate && group && group.type !== 'private';
@@ -150,7 +152,7 @@ function AnnotationEditor({
     if ((event.metaKey || event.ctrlKey) && key === 'Enter') {
       event.stopPropagation();
       event.preventDefault();
-      onSave();
+      void onSave();
     }
   };
 
@@ -167,7 +169,7 @@ function AnnotationEditor({
       className="space-y-4"
       onKeyDown={onKeyDown}
     >
-      {isReplyAnno && (
+      {(isReplyAnno || isPageNoteAnno) && (
         <TextArea
           aria-label={label}
           placeholder={label}

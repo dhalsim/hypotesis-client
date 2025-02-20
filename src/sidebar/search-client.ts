@@ -208,7 +208,7 @@ export class SearchClient extends TinyEmitter {
       }
 
       if (nextSearchAfter) {
-        this._getPage(query, nextSearchAfter, pageIndex + 1);
+        void this._getPage(query, nextSearchAfter, pageIndex + 1);
       } else {
         if (!this._incremental) {
           this.emit('results', this._results);
@@ -238,7 +238,7 @@ export class SearchClient extends TinyEmitter {
     this._expectedCount = null;
     this._fetchedCount = 0;
     this._results = [];
-    this._getPage(query);
+    void this._getPage(query);
   }
 
   /**

@@ -11,7 +11,7 @@ import { useSidebarStore } from '../../store';
 import { nostrSearchUrl } from '../../helpers/nostr';
 
 import Excerpt from '../Excerpt';
-import MarkdownView from '../MarkdownView';
+import TextView from '../TextView';
 import TagList from '../TagList';
 import TagListItem from '../TagListItem';
 
@@ -94,8 +94,8 @@ function AnnotationBody({ annotation, settings }: AnnotationBodyProps) {
           onToggleCollapsed={setCollapsed}
           overflowThreshold={20}
         >
-          <MarkdownView
-            markdown={text}
+          <TextView
+            text={text}
             classes={classnames({
               'p-redacted-text': isHidden(annotation),
             })}

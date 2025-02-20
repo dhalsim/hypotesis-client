@@ -56,7 +56,10 @@ export type GuestToSidebarEvent =
   | 'syncAnchoringStatus'
 
   /** Toggle whether annotations are selected. */
-  | 'toggleAnnotationSelection';
+  | 'toggleAnnotationSelection'
+
+  /** QR code was read. */
+  | 'qrCodeScanResult';
 
 /**
  * Events that the host sends to guests.
@@ -116,9 +119,6 @@ export type SidebarToGuestEvent =
   /** Remove an annotation from the guest frame. */
   | 'deleteAnnotation'
 
-  /** The active feature flags changed. */
-  | 'featureFlagsUpdated'
-
   /**
    * Indicate in the guest which highlights correspond to hovered annotations
    * in the sidebar.
@@ -144,7 +144,10 @@ export type SidebarToGuestEvent =
    * Show a notice that the user is outside the region of the document for the
    * current activity / assignment.
    */
-  | 'setOutsideAssignmentNoticeVisible';
+  | 'setOutsideAssignmentNoticeVisible'
+  
+  /** Ask for camera permission. */
+  | 'askForCameraPermission';
 
 /**
  * Events that the sidebar sends to the host
@@ -155,9 +158,6 @@ export type SidebarToHostEvent =
    * container in the host frame.
    */
   | 'closeSidebar'
-
-  /** The active feature flags changed. */
-  | 'featureFlagsUpdated'
 
   /**
    * Open the partner site help page.

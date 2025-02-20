@@ -216,7 +216,7 @@ export class PDFIntegration extends TinyEmitter implements Integration {
 
     this._reanchoringMaxWait = options.reanchoringMaxWait ?? 3000;
     this._banner = new BannerController();
-    this._checkForSelectableText();
+    void this._checkForSelectableText();
     this._sideBySideActive = false;
 
     // Hide annotation layer when the user is making a selection. The annotation
@@ -401,7 +401,7 @@ export class PDFIntegration extends TinyEmitter implements Integration {
       }
     }
 
-    refreshAnnotations.map(annotation => this._annotator.anchor(annotation));
+    void refreshAnnotations.map(annotation => this._annotator.anchor(annotation));
   }
 
   /**

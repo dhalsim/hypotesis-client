@@ -32,14 +32,6 @@ export type IndexResponse = {
 };
 
 /**
- * Structure of the Hypothesis links response (`/api/links`).
- *
- * This is a map of link name (eg. "account.settings") to URL. The URL may
- * include ":"-prefixed placeholders/variables.
- */
-export type LinksResponse = Record<string, string>;
-
-/**
  * Selector which indicates the time range within a video or audio file that
  * an annotation refers to.
  */

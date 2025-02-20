@@ -1,17 +1,13 @@
+// TODO: nostr: review for nostr
 import shallowEqual from 'shallowequal';
 
 // @ts-ignore - TS doesn't know about SVG files.
 import { default as logo } from '../../images/icons/logo.svg';
 import type { Group } from '../../types/api';
-import type { SidebarSettings } from '../../types/config';
-import type { Service } from '../../types/config';
-import { serviceConfig } from '../config/service-config';
 import { isReply } from '../helpers/annotation-metadata';
 import { PUBLIC_GROUP_ID } from '../helpers/groups';
 import type { SidebarStore } from '../store';
 import { watch } from '../util/watch';
-import type { APIService } from './api';
-import type { ToastMessengerService } from './toast-messenger';
 
 const DEFAULT_ORG_ID = '__default__';
 
@@ -45,22 +41,12 @@ function injectOrganizations(groups: Group[]) {
  */
 export class GroupsService {
   private _store: SidebarStore;
-  private _api: APIService;
-  private _toastMessenger: ToastMessengerService;
-  private _serviceConfig: Service | null;
   private _reloadSetUp: boolean;
 
   constructor(
     store: SidebarStore,
-    api: APIService,
-    settings: SidebarSettings,
-    toastMessenger: ToastMessengerService,
   ) {
     this._store = store;
-    this._api = api;
-    this._toastMessenger = toastMessenger;
-
-    this._serviceConfig = serviceConfig(settings);
     this._reloadSetUp = false;
   }
 
@@ -104,7 +90,7 @@ export class GroupsService {
           // Ignore the first time that the profile is loaded.
           return;
         }
-        this.load();
+        void this.load();
       },
       shallowEqual,
     );
@@ -227,13 +213,13 @@ export class GroupsService {
   /**
    * Request to remove the current user from a group.
    */
-  leave(id: string): Promise<void> {
-    // The groups list will be updated in response to a session state
-    // change notification from the server. We could improve the UX here
-    // by optimistically updating the session state
-    return this._api.group.member.delete({
-      pubid: id,
-      userid: 'me',
-    });
-  }
+  // leave(id: string): Promise<void> {
+  //   // The groups list will be updated in response to a session state
+  //   // change notification from the server. We could improve the UX here
+  //   // by optimistically updating the session state
+  //   return this._api.group.member.delete({
+  //     pubid: id,
+  //     userid: 'me',
+  //   });
+  // }
 }

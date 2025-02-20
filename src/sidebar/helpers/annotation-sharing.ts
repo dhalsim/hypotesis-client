@@ -1,6 +1,4 @@
 import type { Annotation } from '../../types/api';
-import type { SidebarSettings } from '../../types/config';
-import { serviceConfig } from '../config/service-config';
 
 /**
  * Retrieve an appropriate sharing link for this annotation.
@@ -28,6 +26,7 @@ export function annotationSharingLink(annotation: Annotation): string | null {
  * a specific group (groupID) on a specific document (documentURI). If the
  * `documentURI` provided is not a web-accessible URL, no link is generated.
  */
+// TODO: nostr: we need a bouncer for us
 export function pageSharingLink(
   documentURI: string,
   groupId: string,
@@ -47,13 +46,4 @@ export function pageSharingLink(
  */
 export function isShareableURI(uri: string): boolean {
   return /^http(s?):/i.test(uri);
-}
-
-/**
- * Is the sharing of annotations enabled? Check for any defined `serviceConfig`,
- * but default to `true` if none found.
- */
-export function sharingEnabled(settings: SidebarSettings): boolean {
-  const service = serviceConfig(settings);
-  return service?.enableShareLinks !== false;
 }

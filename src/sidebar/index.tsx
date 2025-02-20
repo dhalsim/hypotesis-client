@@ -17,39 +17,31 @@ import {
   preStartServer as preStartRPCServer,
 } from './cross-origin-rpc';
 import { ServiceContext } from './service-context';
-import { AnalyticsService } from './services/analytics';
-import { AnnotationActivityService } from './services/annotation-activity';
 import { AnnotationsService } from './services/annotations';
-import { AnnotationsExporter } from './services/annotations-exporter';
-import { APIService } from './services/api';
-import { APIRoutesService } from './services/api-routes';
-import { AuthService } from './services/auth';
 import { AutosaveService } from './services/autosave';
 import { DashboardService } from './services/dashboard';
 import { FrameSyncService } from './services/frame-sync';
 import { GroupsService } from './services/groups';
-import { ImportAnnotationsService } from './services/import-annotations';
-import { LoadAnnotationsService } from './services/load-annotations';
 import { LocalStorageService } from './services/local-storage';
 import { PersistedDefaultsService } from './services/persisted-defaults';
 import { RouterService } from './services/router';
-import { ServiceURLService } from './services/service-url';
-import { SessionService } from './services/session';
-import { StreamFilter } from './services/stream-filter';
-import { StreamerService } from './services/streamer';
 import { TagsService } from './services/tags';
 import { ThreadsService } from './services/threads';
 import { ToastMessengerService } from './services/toast-messenger';
 import { NostrHighlightAdapterService } from './services/nostr-highlight-adapter';
-import { NostrFetchHighlightsService } from './services/nostr-fetch-highlights';
+import { NostrHighlightsFetcherService } from './services/nostr-highlights-fetcher';
 import { NostrProfileService } from './services/nostr-profile';
 import { NostrRelaysService } from './services/nostr-relays';
 import { NostrSettingsService } from './services/nostr-settings';
 import { NostrPublisherService } from './services/nostr-publisher';
+import { NostrThreadsFetcherService } from './services/nostr-threads-fetcher';
+import { NostrPageNotesFetcherService } from './services/nostr-page-comments-fetcher';
+import { NostrPageNotesAdapterService } from './services/nostr-page-comments-adapter';
+import { NostrThreadAdapterService } from './services/nostr-thread-adapter';
+import { NostrSignerService } from './services/nostr-signer';
 import { createSidebarStore } from './store';
-import type { SidebarStore } from './store';
 import { disableOpenerForExternalLinks } from './util/disable-opener-for-external-links';
-import * as sentry from './util/sentry';
+import type { SidebarStore } from './store';
 
 // Read settings rendered into sidebar app HTML by service/extension.
 const configFromSidebar = parseJsonConfig(document) as ConfigFromSidebar;
@@ -58,26 +50,14 @@ const configFromSidebar = parseJsonConfig(document) as ConfigFromSidebar;
 //
 // If any checks fail we'll log warnings and disable error reporting, but try
 // and continue anyway.
-// TODO: nostr: remove sentry
 const envOk = checkEnvironment(window);
 
-if (configFromSidebar.sentry && envOk) {
-  // Initialize Sentry. This is required at the top of this file
-  // so that it happens early in the app's startup flow
-  sentry.init(configFromSidebar.sentry);
+if (!envOk) {
+  console.warn('envOk', envOk);
 }
 
 // Prevent tab-jacking.
 disableOpenerForExternalLinks(document.body);
-
-/**
- * Configure the Hypothesis API client.
- *
- * @inject
- */
-function setupApi(api: APIService, streamer: StreamerService) {
-  api.setClientId(streamer.clientId);
-}
 
 /**
  * Update the route in the store based on the initial URL.
@@ -93,9 +73,8 @@ function syncRoute(router: RouterService) {
  *
  * @inject
  */
-function loadGroupsAndProfile(groups: GroupsService, session: SessionService) {
-  groups.load();
-  session.load();
+function loadGroupsAndProfile(groups: GroupsService) {
+  void groups.load();
 }
 
 /**
@@ -109,11 +88,9 @@ function loadGroupsAndProfile(groups: GroupsService, session: SessionService) {
 function initServices(
   autosaveService: AutosaveService,
   persistedDefaults: PersistedDefaultsService,
-  serviceURL: ServiceURLService,
 ) {
   autosaveService.init();
   persistedDefaults.init();
-  serviceURL.init();
 }
 
 /**
@@ -148,32 +125,26 @@ function startApp(settings: SidebarSettings, appEl: HTMLElement) {
 
   // Register services.
   container
-    .register('analytics', AnalyticsService)
-    .register('annotationsExporter', AnnotationsExporter)
     .register('annotationsService', AnnotationsService)
-    .register('annotationActivity', AnnotationActivityService)
-    .register('api', APIService)
-    .register('apiRoutes', APIRoutesService)
-    .register('auth', AuthService)
     .register('autosaveService', AutosaveService)
     .register('dashboard', DashboardService)
     .register('frameSync', FrameSyncService)
     .register('groups', GroupsService)
-    .register('importAnnotationsService', ImportAnnotationsService)
-    .register('loadAnnotationsService', LoadAnnotationsService)
     .register('localStorage', LocalStorageService)
     .register('persistedDefaults', PersistedDefaultsService)
     .register('nostrRelaysService', NostrRelaysService)
     .register('nostrProfileService', NostrProfileService)
     .register('nostrSettingsService', NostrSettingsService)
-    .register('nostrFetchHighlightsService', NostrFetchHighlightsService)
+    .register('nostrHighlightsFetcherService', NostrHighlightsFetcherService)
     .register('nostrPublisherService', NostrPublisherService)
     .register('nostrHighlightAdapterService', NostrHighlightAdapterService)
+    .register('nostrThreadsFetcherService', NostrThreadsFetcherService)
+    .register('nostrThreadAdapterService', NostrThreadAdapterService)
+    .register('nostrPageNotesFetcherService', NostrPageNotesFetcherService)
+    .register('nostrPageNotesAdapterService', NostrPageNotesAdapterService)
+    .register('nostrSignerService', NostrSignerService)
+
     .register('router', RouterService)
-    .register('serviceURL', ServiceURLService)
-    .register('session', SessionService)
-    .register('streamer', StreamerService)
-    .register('streamFilter', StreamFilter)
     .register('tags', TagsService)
     .register('threadsService', ThreadsService)
     .register('toastMessenger', ToastMessengerService)
@@ -194,9 +165,10 @@ function startApp(settings: SidebarSettings, appEl: HTMLElement) {
   // sidebar-only behavior).
   container.run(syncRoute);
   container.run(initServices);
-  container.run(setupApi);
+  
   // TODO: nostr: remove this once Nostr is fully implemented
   container.run(loadGroupsAndProfile);
+  
   container.run(startRPCServer);
   container.run(setupFrameSync);
 

@@ -12,10 +12,9 @@ import { framesModule } from './modules/frames';
 import { groupsModule } from './modules/groups';
 import { linksModule } from './modules/links';
 import { nostrModule } from './modules/nostr';
-import { realTimeUpdatesModule } from './modules/real-time-updates';
+import { nostrRelaysModule } from './modules/nostr-relays';
 import { routeModule } from './modules/route';
 import { selectionModule } from './modules/selection';
-import { sessionModule } from './modules/session';
 import { sidebarPanelsModule } from './modules/sidebar-panels';
 import { toastMessagesModule } from './modules/toast-messages';
 import { viewerModule } from './modules/viewer';
@@ -49,14 +48,13 @@ export function createSidebarStore(settings: SidebarSettings) {
     framesModule,
     linksModule,
     groupsModule,
-    realTimeUpdatesModule,
     routeModule,
     selectionModule,
-    sessionModule,
     sidebarPanelsModule,
     toastMessagesModule,
     viewerModule,
     nostrModule,
+    nostrRelaysModule,
   ] as const;
 
   return createStore(modules, [settings], middleware);

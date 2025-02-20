@@ -23,6 +23,7 @@ import type {
   SidebarToGuestEvent,
 } from '../types/port-rpc-events';
 import { Adder } from './adder';
+import { QRCodeScanner } from './qr-code-scanner';
 import { TextRange } from './anchoring/text-range';
 import { BucketBarClient } from './bucket-bar-client';
 import { LayoutChangeEvent } from './events';
@@ -205,6 +206,7 @@ export class Guest extends TinyEmitter implements Annotator, Destroyable {
   private _contentReady?: Promise<void>;
 
   private _adder: Adder;
+  private _qrCodeScanner: QRCodeScanner;
   private _clusterToolbar?: HighlightClusterController;
   private _hostFrame: Window;
   private _highlightsVisible: boolean;
@@ -288,6 +290,14 @@ export class Guest extends TinyEmitter implements Annotator, Destroyable {
         this.selectAnnotations(tags, { focusInSidebar: true }),
     });
 
+    this._qrCodeScanner = new QRCodeScanner(this.element, {
+      onScanSuccess: (data: string) => {
+        this.sendQrCodeScanResult(data);
+      },
+      onScanError: () => {
+      },
+    });
+
     this._selectionObserver = new SelectionObserver(range => {
       if (range) {
         this._onSelection(range);
@@ -332,11 +342,11 @@ export class Guest extends TinyEmitter implements Annotator, Destroyable {
     }
 
     this._hostRPC = new PortRPC();
-    this._connectHost(hostFrame);
+    void this._connectHost(hostFrame);
 
     this._sidebarRPC = new PortRPC();
     this._sidebarLayout = null;
-    this._connectSidebar();
+    void this._connectSidebar();
 
     this._bucketBarClient = new BucketBarClient({
       contentContainer: this._integration.contentContainer(),
@@ -492,7 +502,7 @@ export class Guest extends TinyEmitter implements Annotator, Destroyable {
     );
 
     this._hostRPC.on('scrollToAnnotation', (tag: string) => {
-      this._scrollToAnnotation(tag);
+      void this._scrollToAnnotation(tag);
     });
 
     this._hostRPC.on('selectAnnotations', (tags: string[], toggle: boolean) =>
@@ -520,6 +530,7 @@ export class Guest extends TinyEmitter implements Annotator, Destroyable {
     // Discover and connect to the host frame. All RPC events must be
     // registered before creating the channel.
     const hostPort = await this._portFinder.discover('host');
+    
     this._hostRPC.connect(hostPort);
   }
 
@@ -557,11 +568,6 @@ export class Guest extends TinyEmitter implements Annotator, Destroyable {
   }
 
   async _connectSidebar() {
-    this._sidebarRPC.on(
-      'featureFlagsUpdated',
-      (flags: Record<string, boolean>) => this.features.update(flags),
-    );
-
     // Handlers for events sent when user hovers or clicks on an annotation card
     // in the sidebar.
     this._sidebarRPC.on('hoverAnnotations', (tags: string[]) =>
@@ -569,7 +575,7 @@ export class Guest extends TinyEmitter implements Annotator, Destroyable {
     );
 
     this._sidebarRPC.on('scrollToAnnotation', (tag: string) => {
-      this._scrollToAnnotation(tag);
+      void this._scrollToAnnotation(tag);
     });
 
     // Handler for controls on the sidebar
@@ -602,6 +608,12 @@ export class Guest extends TinyEmitter implements Annotator, Destroyable {
       },
     );
 
+    this._sidebarRPC.on('askForCameraPermission', () => {
+      this._sidebarRPC.call('closeSidebar');
+      
+      this._qrCodeScanner.show()
+    });
+
     this._sidebarRPC.on('navigateToSegment', (annotation: AnnotationData) =>
       this._integration.navigateToSegment?.(annotation),
     );
@@ -610,11 +622,10 @@ export class Guest extends TinyEmitter implements Annotator, Destroyable {
     //
     // RPC calls are deferred until a connection is made, so these steps can
     // complete in either order.
-    this._portFinder.discover('sidebar').then(port => {
-      this._sidebarRPC.connect(port);
-    });
-
-    this._sendDocumentInfo();
+    const port = await this._portFinder.discover('sidebar');
+    this._sidebarRPC.connect(port);
+    
+    void this._sendDocumentInfo();
   }
 
   destroy() {
@@ -805,13 +816,19 @@ export class Guest extends TinyEmitter implements Annotator, Destroyable {
     };
 
     this._sidebarRPC.call('createAnnotation', annotation);
-    this.anchor(annotation);
+    await this.anchor(annotation);
 
     // Removing the text selection triggers the `SelectionObserver` callback,
     // which causes the adder to be removed after some delay.
     removeTextSelection();
 
     return annotation;
+  }
+
+  sendQrCodeScanResult(data: string) {
+    this._qrCodeScanner.destroy();    
+    this._sidebarRPC.call('openSidebar');
+    this._sidebarRPC.call('qrCodeScanResult', data);
   }
 
   /**

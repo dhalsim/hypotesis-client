@@ -1,26 +1,23 @@
-import classnames from 'classnames';
 import { useEffect, useRef } from 'preact/hooks';
 
 import { tabForAnnotation } from '../helpers/tabs';
 import { withServices } from '../service-context';
-import type { FrameSyncService } from '../services/frame-sync';
-import type { NostrFetchHighlightsService } from '../services/nostr-fetch-highlights';
-
 import { useSidebarStore } from '../store';
-import LoggedOutMessage from './LoggedOutMessage';
-import LoginPromptPanel from './LoginPromptPanel';
-import PendingUpdatesNotification from './PendingUpdatesNotification';
+import type { FrameSyncService } from '../services/frame-sync';
+import type { NostrHighlightsFetcherService } from '../services/nostr-highlights-fetcher';
+import type { NostrPageNotesFetcherService } from '../services/nostr-page-comments-fetcher';
+
 import SidebarContentError from './SidebarContentError';
 import SidebarTabs from './SidebarTabs';
 import FilterControls from './search/FilterControls';
 
 export type SidebarViewProps = {
   onLogin: () => void;
-  onSignUp: () => void;
 
   // injected
   frameSync: FrameSyncService;
-  nostrFetchHighlightsService: NostrFetchHighlightsService;
+  nostrHighlightsFetcherService: NostrHighlightsFetcherService;
+  nostrPageNotesFetcherService: NostrPageNotesFetcherService;
 };
 
 /**
@@ -29,25 +26,27 @@ export type SidebarViewProps = {
 function SidebarView({
   frameSync,
   onLogin,
-  onSignUp,
-  nostrFetchHighlightsService
+  nostrHighlightsFetcherService,
+  nostrPageNotesFetcherService
 }: SidebarViewProps) {
   // Store state values
   const store = useSidebarStore();
   const focusedGroupId = store.focusedGroupId();
   const isLoading = store.isLoading();
-  const isLoggedIn = store.isLoggedIn();
+  const isLoggedIn = store.isNostrLoggedIn();
 
   const linkedAnnotationId = store.directLinkedAnnotationId();
+  
   const linkedAnnotation = linkedAnnotationId
     ? store.findAnnotationByID(linkedAnnotationId)
     : undefined;
-  const directLinkedTab = linkedAnnotation
+  
+    const directLinkedTab = linkedAnnotation
     ? tabForAnnotation(linkedAnnotation)
     : 'annotation';
 
   const searchUris = store.searchUris();
-  const userId = store.profile().userid;
+  const userId = store.getNostrProfile()?.publicKeyHex;
 
   // If, after loading completes, no `linkedAnnotation` object is present when
   // a `linkedAnnotationId` is set, that indicates an error
@@ -73,6 +72,12 @@ function SidebarView({
     !hasDirectLinkedAnnotationError &&
     !isLoading;
 
+  useEffect(() => {
+    if (showLoggedOutMessage) {
+      store.openSidebarPanel('nostrConnectPanel');
+    }
+  }, [showLoggedOutMessage, store]);
+
   const prevGroupId = useRef(focusedGroupId);
 
   // Reload annotations when group, user or document search URIs change
@@ -95,17 +100,35 @@ function SidebarView({
       }
       prevGroupId.current = focusedGroupId;
     }
+
+    // it takes time to load searchUris
+    const uri = searchUris[0];
     
-    if (focusedGroupId && searchUris.length) {
-      nostrFetchHighlightsService.loadByUri({
-        uri: searchUris[0],
+    if (focusedGroupId && uri) {
+      nostrHighlightsFetcherService.loadByUri({
+        uri,
+        onError: (error) => { 
+          // eslint-disable-next-line no-console
+          console.log(error); 
+        }
+      });
+
+      nostrPageNotesFetcherService.loadPageNotes({
+        uri,
         onError: (error) => { 
           // eslint-disable-next-line no-console
           console.log(error); 
         }
       });
     }
-  }, [store, nostrFetchHighlightsService, focusedGroupId, userId, searchUris]);
+  }, [
+    store, 
+    nostrHighlightsFetcherService, 
+    nostrPageNotesFetcherService, 
+    focusedGroupId, 
+    userId, 
+    searchUris
+  ]);
 
   // When a `linkedAnnotationAnchorTag` becomes available, scroll to it
   // and focus it
@@ -123,21 +146,9 @@ function SidebarView({
   return (
     <div className="relative">
       <h2 className="sr-only">Annotations</h2>
-      <div
-        className={classnames(
-          // z-10 ensures this appears over sidebar panels, which use the same
-          // z-index but render lower in the DOM
-          'fixed z-10',
-          // Setting 9px to the right instead of some standard tailwind size,
-          // so that it matches the padding of the sidebar's container.
-          // DEFAULT `.container` padding is defined in tailwind.conf.js
-          'right-[9px] top-12',
-        )}
-      >
-        <PendingUpdatesNotification />
-      </div>
       {showFilterControls && <FilterControls withCardContainer />}
-      <LoginPromptPanel onLogin={onLogin} onSignUp={onSignUp} />
+      {/* TODO: nostr: we can use nip42 authentication: https://nips.nostr.com/42
+      // LoginPromptPanel */}
       {hasDirectLinkedAnnotationError && (
         <SidebarContentError
           errorType="annotation"
@@ -149,12 +160,12 @@ function SidebarView({
         <SidebarContentError errorType="group" onLoginRequest={onLogin} />
       )}
       {!hasContentError && <SidebarTabs isLoading={isLoading} />}
-      {showLoggedOutMessage && <LoggedOutMessage onLogin={onLogin} />}
     </div>
   );
 }
 
 export default withServices(SidebarView, [
   'frameSync',
-  'nostrFetchHighlightsService',
+  'nostrHighlightsFetcherService',
+  'nostrPageNotesFetcherService',
 ]);

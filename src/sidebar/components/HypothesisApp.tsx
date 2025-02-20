@@ -3,34 +3,29 @@ import classnames from 'classnames';
 import { useEffect, useMemo } from 'preact/hooks';
 
 import type { SidebarSettings } from '../../types/config';
-import { serviceConfig } from '../config/service-config';
-import { isThirdPartyService } from '../helpers/is-third-party-service';
-import { shouldAutoDisplayTutorial } from '../helpers/session';
 import { applyTheme } from '../helpers/theme';
 import { withServices } from '../service-context';
-import type { AuthService } from '../services/auth';
 import type { FrameSyncService } from '../services/frame-sync';
 import type { NostrSettingsService } from '../services/nostr-settings';
-import type { SessionService } from '../services/session';
 import type { ToastMessengerService } from '../services/toast-messenger';
 import { useSidebarStore } from '../store';
 import AnnotationView from './AnnotationView';
 import HelpPanel from './HelpPanel';
-import NostrConnectPanel from './NostrConnectPanel';
+import NostrConnectPanel from './NostrConnect';
 import NotebookView from './NotebookView';
 import ProfileView from './ProfileView';
 import ShareDialog from './ShareDialog';
 import SidebarView from './SidebarView';
-import StreamView from './StreamView';
+// TODO: nostr: probably StreamView is not used in the client anymore, 
+// but this can be used to do global search with using StreamSearchInput
+//import StreamView from './StreamView';
 import ToastMessages from './ToastMessages';
 import TopBar from './TopBar';
 import SearchPanel from './search/SearchPanel';
 
 export type HypothesisAppProps = {
-  auth: AuthService;
   frameSync: FrameSyncService;
   settings: SidebarSettings;
-  session: SessionService;
   toastMessenger: ToastMessengerService;
   nostrSettingsService: NostrSettingsService;
 };
@@ -42,15 +37,10 @@ export type HypothesisAppProps = {
  * and content appropriate for the current route.
  */
 function HypothesisApp({
-  auth,
-  frameSync,
   settings,
-  session,
-  toastMessenger,
   nostrSettingsService,
 }: HypothesisAppProps) {
   const store = useSidebarStore();
-  const profile = store.profile();
   const route = store.route();
   const isModalRoute = route === 'notebook' || route === 'profile';
 
@@ -63,41 +53,10 @@ function HypothesisApp({
   const isSidebar = route === 'sidebar';
 
   useEffect(() => {
-    if (shouldAutoDisplayTutorial(isSidebar, profile, settings)) {
+    if (localStorage.getItem('openHelpPanel') !== 'false') {
       store.openSidebarPanel('help');
     }
-  }, [isSidebar, profile, settings, store]);
-
-  const isThirdParty = isThirdPartyService(settings);
-
-  // TODO: nostr: remove this once Nostr is fully implemented
-  const login = async () => {
-    if (serviceConfig(settings)) {
-      // Let the host page handle the login request
-      frameSync.notifyHost('loginRequested');
-      return;
-    }
-
-    try {
-      await auth.login();
-
-      store.closeSidebarPanel('loginPrompt');
-      store.clearGroups();
-      session.reload();
-    } catch (err) {
-      toastMessenger.error(err.message);
-    }
-  };
-
-  // TODO: nostr: remove this once Nostr is fully implemented
-  const signUp = () => {
-    if (serviceConfig(settings)) {
-      // Let the host page handle the signup request
-      frameSync.notifyHost('signupRequested');
-      return;
-    }
-    window.open(store.getLink('signup'));
-  };
+  }, [isSidebar, store]);
 
   const promptToLogout = async () => {
     const drafts = store.countDrafts();
@@ -125,14 +84,15 @@ function HypothesisApp({
     });
   };
 
-  const nostrLogout = async () => {
+  const onNostrLogout = async () => {
     if (!(await promptToLogout())) {
       return;
     }
 
     store.removeAnnotations(store.unsavedAnnotations());
     store.discardAllDrafts();
-    nostrSettingsService.setPrivateKey(null);
+    
+    await nostrSettingsService.clearPrivateKeyAndBunkerUrl();
   };
 
   return (
@@ -156,7 +116,7 @@ function HypothesisApp({
     >
       {!isModalRoute && (
         <TopBar
-          onNostrLogout={nostrLogout}
+          onNostrLogout={onNostrLogout}
           isSidebar={isSidebar}
         />
       )}
@@ -164,22 +124,21 @@ function HypothesisApp({
         <ToastMessages />
         <HelpPanel />
         <SearchPanel />
-        <ShareDialog shareTab={!isThirdParty} />
+        <ShareDialog />
         <NostrConnectPanel
           onClose={() => store.toggleSidebarPanel('nostrConnectPanel')}
-          onSavePrivateKey={privateKey =>
-            nostrSettingsService.setPrivateKey(privateKey)
-          }
         />
 
         {route && (
           <main>
-            {route === 'annotation' && <AnnotationView onLogin={login} />}
+            {/* TODO: nostr: we can use nip42 authentication: https://nips.nostr.com/42 */}
+            {route === 'annotation' && <AnnotationView onLogin={() => {}} />}
             {route === 'notebook' && <NotebookView />}
             {route === 'profile' && <ProfileView />}
-            {route === 'stream' && <StreamView />}
+            {/* <StreamView /> */}
             {route === 'sidebar' && (
-              <SidebarView onLogin={login} onSignUp={signUp} />
+              // TODO: nostr: we can use nip42 authentication: https://nips.nostr.com/42
+              <SidebarView onLogin={() => {}} />
             )}
           </main>
         )}
@@ -189,9 +148,7 @@ function HypothesisApp({
 }
 
 export default withServices(HypothesisApp, [
-  'auth',
   'frameSync',
-  'session',
   'settings',
   'toastMessenger',
   'nostrSettingsService',
